@@ -775,7 +775,7 @@
 
         for (let i = 1; i < clean.length; i++) {
           const w = clean[i];
-          if (Math.abs(w.yc - avgY) <= Math.max(avgH, w.h) * 0.6) {
+          if (Math.abs(w.yc - avgY) <= Math.max(avgH, w.h) * 0.8) {
             currentRow.push(w);
             avgY = currentRow.reduce((s, item) => s + item.yc, 0) / currentRow.length;
             avgH = currentRow.reduce((s, item) => s + item.h, 0) / currentRow.length;
