@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Snap2Sheet — Wireless A4 Photo to Excel Converter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .tab-active {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+    .tab-inactive {
+      background-color: #ffffff;
+      color: #475569;
+    }
+    .tab-inactive:hover {
+      background-color: #f1f5f9;
+    }
+    .cell-input {
+      width: 100%;
+      min-width: 90px;
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 6px 8px;
+      font-size: 13px;
+      border-radius: 4px;
+      outline: none;
+    }
+    .cell-input:focus {
+      background: #ffffff;
+      border-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+    }
+    #qrContainer img, #qrContainer canvas {
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* ==================== DARK MODE THEME ==================== */
+    body.dark-mode {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    body.dark-mode header,
+    body.dark-mode .bg-white {
+      background-color: #111827 !important;
+      color: #e2e8f0;
+    }
+    body.dark-mode .bg-slate-50,
+    body.dark-mode .bg-slate-100 {
+      background-color: #1e293b !important;
+    }
+    body.dark-mode .border-slate-200,
+    body.dark-mode .border-slate-300,
+    body.dark-mode .border-slate-100 {
+      border-color: #334155 !important;
+    }
+    body.dark-mode .text-slate-900 {
+      color: #f8fafc !important;
+    }
+    body.dark-mode .text-slate-800,
+    body.dark-mode .text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+    body.dark-mode .text-slate-600,
+    body.dark-mode .text-slate-500,
+    body.dark-mode .text-slate-400 {
+      color: #94a3b8 !important;
+    }
+    body.dark-mode input,
+    body.dark-mode select {
+      background-color: #0f172a !important;
+      color: #f1f5f9 !important;
+      border-color: #334155 !important;
+    }
+    body.dark-mode .cell-input {
+      background-color: transparent !important;
+      color: #f1f5f9 !important;
+    }
+    body.dark-mode .cell-input:focus {
+      background-color: #1e293b !important;
+      border-color: #10b981 !important;
+    }
+    body.dark-mode .tab-inactive {
+      background-color: #1e293b !important;
+      color: #cbd5e1 !important;
+    }
+    body.dark-mode .tab-active {
+      background-color: #10b981 !important;
+      color: #ffffff !important;
+    }
+    body.dark-mode #previewTbody tr:hover {
+      background-color: #1e293b !important;
+    }
+    body.dark-mode #authGate {
+      background-color: #0b0f19 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ==================== AUTHENTICATION GATE (LOGIN / SIGN UP) ==================== -->
+  <section id="authGate" class="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-7 space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">Snap2Sheet</h1>
+            <p class="text-[11px] text-slate-500">Sign in with your Gmail to continue</p>
+          </div>
+        </div>
+        <button id="btnAuthThemeToggle" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
+          <span id="authThemeIcon">🌙</span>
+        </button>
+      </div>
+
+      <!-- Real Google Sign-In Section -->
+      <div class="space-y-2.5">
+        <div id="googleBtnContainer" class="flex justify-center min-h-[42px]"></div>
+        <button id="btnContinueGoogleFallback" class="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 shadow-xs transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.6 2.8C6.1 7.2 8.8 5 12 5z"/>
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/>
+            <path fill="#FBBC05" d="M5.2 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.6-2.8z"/>
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.9-2.2-6.8-5.1l-3.6 2.8C3.5 20.4 7.4 23 12 23z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+
+        <div class="text-center">
+          <button id="btnToggleGoogleSetup" class="text-[11px] text-emerald-700 hover:underline font-medium">
+            Configure Google OAuth Client ID (for GitHub Pages)
+          </button>
+        </div>
+
+        <div id="googleSetupBox" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-[11px] text-slate-600">
+          <p>Paste your <strong>Google OAuth Web Client ID</strong> so only Gmail accounts signed into this phone/laptop can log in:</p>
+          <div class="flex gap-1.5">
+            <input id="inputGoogleClientId" type="text" placeholder="123456789-abc.apps.googleusercontent.com" class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono" />
+            <button id="btnSaveGoogleClientId" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="relative flex items-center py-1">
+        <div class="flex-grow border-t border-slate-200"></div>
+        <span class="shrink mx-3 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">or use Gmail &amp; Password</span>
+        <div class="flex-grow border-t border-slate-200"></div>
+      </div>
+
+      <!-- Login / Sign Up Mode Switch -->
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button id="btnTabLogin" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition">Login</button>
+        <button id="btnTabSignup" class="py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">Sign Up</button>
+      </div>
+
+      <!-- LOGIN PANEL (Gmail + Password) -->
+      <div id="panelLogin" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Gmail ID</label>
+          <input id="inputLoginUser" type="email" placeholder="yourname@gmail.com" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+          <input id="inputLoginPassword" type="password" placeholder="Enter your password" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
+        </div>
+        <button id="btnLoginWithPassword" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+          Login to Snap2Sheet
+        </button>
+      </div>
+
+      <!-- SIGN UP PANEL (Gmail + Password) -->
+      <div id="panelSignup" class="hidden space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Gmail ID <span class="text-rose-500">*</span></label>
+          <input id="inputSignupGmail" type="email" placeholder="yourname@gmail.com" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Set Password <span class="text-rose-500">*</span></label>
+          <input id="inputSignupPassword" type="password" placeholder="Create a password (min 4 chars)" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
+        </div>
+        <button id="btnSignupSubmit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
+          Sign Up &amp; Continue
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MAIN APP SHELL (HIDDEN UNTIL LOGGED IN) ==================== -->
+  <div id="appShell" class="hidden min-h-screen flex flex-col">
+  <!-- Top Navigation -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate">Snap2Sheet</h1>
+          <p class="text-[11px] text-slate-500 leading-tight hidden sm:block">Wireless A4 Photo &rarr; Structured Excel</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+        <button id="btnModeLaptop" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-active flex items-center gap-1.5">
+          <svg class="w-4 h-4 hidden sm:inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>Laptop Studio</span>
+        </button>
+        <button id="btnModeMobile" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-inactive flex items-center gap-1.5">
+          <svg class="w-4 h-4 hidden sm:inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <span>Mobile Camera</span>
+        </button>
+      </div>
+
+      <!-- Theme Toggle & Settings -->
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="headerUserBadge" class="hidden md:inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700 max-w-[160px] truncate"></span>
+        <button id="btnThemeToggle" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span id="themeIcon">🌙</span>
+          <span id="themeLabel" class="hidden sm:inline">Dark</span>
+        </button>
+        <button id="btnLogout" title="Logout" class="px-2.5 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition">
+          Logout
+        </button>
+        <button id="btnOpenSettings" title="OCR & AI Settings" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ==================== LAPTOP STUDIO VIEW ==================== -->
+    <section id="viewLaptop" class="space-y-6">
+
+      <!-- Top 3-Step Control Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- Card 1: Wireless Mobile Link (QR) -->
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                Step 1 &bull; Wireless Link
+              </span>
+              <span id="laptopPeerBadge" class="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Connecting...
+              </span>
+            </div>
+            <h2 class="text-base font-semibold text-slate-900 mb-1">Scan QR with Mobile</h2>
+            <p class="text-xs text-slate-500 mb-4">Scan this QR code from your phone camera to open the wireless multi-photo shooter.</p>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[180px]">
+              <div id="qrContainer" class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-xs"></div>
+              <div class="mt-2.5 flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-lg">
+                <span class="text-[11px] font-medium text-slate-500">Laptop OTP:</span>
+                <span id="peerOtpDisplay" class="text-sm font-bold font-mono tracking-widest text-emerald-700 select-all">------</span>
+              </div>
+              <p id="peerIdDisplay" class="mt-1 text-[11px] font-mono text-slate-400 select-all">ID: generating...</p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="btnOpenLaptopOtpModal" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+              Enter Mobile OTP
+            </button>
+            <button id="btnCopyLink" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+              Copy Link
+            </button>
+            <button id="btnRefreshPeer" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+              New OTP
+            </button>
+          </div>
+          <div id="localHostHint" class="hidden mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1.5">
+            <div><strong>Local/Preview Mode:</strong> Phone se website kholne ke liye is file ko <strong>GitHub Pages</strong> (<code>https://...</code>) par upload karein, ya apna GitHub URL yahan daalein:</div>
+            <input id="inputCustomHostUrl" type="url" placeholder="https://yourname.github.io/snap2sheet/" class="w-full px-2 py-1 rounded-lg border border-amber-300 bg-white text-slate-800 text-[11px] font-mono" />
+          </div>
+        </div>
+
+        <!-- Card 2: Excel Output Mode (New vs Append) -->
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                Step 2 &bull; Excel Target
+              </span>
+            </div>
+            <h2 class="text-base font-semibold text-slate-900 mb-1">New File or Append to Existing?</h2>
+            <p class="text-xs text-slate-500 mb-4">Choose whether to create a fresh Excel file or add rows below an existing file.</p>
+
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+              <button id="btnTargetNew" class="p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 text-left transition">
+                <div class="text-xs font-bold text-emerald-900">New Excel File</div>
+                <div class="text-[11px] text-emerald-700 mt-0.5">Start fresh .xlsx</div>
+              </button>
+              <button id="btnTargetAppend" class="p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+                <div class="text-xs font-bold text-slate-800">Previous Excel</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Add below last row</div>
+              </button>
+            </div>
+
+            <!-- New File Name Input -->
+            <div id="panelNewExcel" class="space-y-2.5">
+              <label class="block text-xs font-medium text-slate-700">Output File Name</label>
+              <div class="flex items-center">
+                <input id="inputNewFilename" type="text" value="A4_Converted_Data" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-l-xl focus:outline-none focus:border-emerald-500" />
+                <span class="px-3 py-2 text-sm bg-slate-100 border border-l-0 border-slate-300 rounded-r-xl text-slate-600 font-mono">.xlsx</span>
+              </div>
+            </div>
+
+            <!-- Existing Excel Upload Panel -->
+            <div id="panelAppendExcel" class="hidden space-y-2.5">
+              <label class="block text-xs font-medium text-slate-700">Select Previous Excel File (.xlsx / .xls)</label>
+              <input id="inputExistingExcel" type="file" accept=".xlsx,.xls,.csv" class="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl p-1.5" />
+              <div id="existingExcelInfo" class="hidden bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-xs space-y-1">
+                <div class="flex justify-between font-semibold text-blue-900">
+                  <span id="existingFileName" class="truncate">file.xlsx</span>
+                  <span id="existingRowCount" class="shrink-0 ml-2">0 rows</span>
+                </div>
+                <div class="text-blue-700 text-[11px]">New data will be added starting at <strong id="nextRowNum">Row 1</strong>.</div>
+                <div class="flex items-center gap-2 pt-1">
+                  <label class="text-[11px] text-blue-800 font-medium">Sheet:</label>
+                  <select id="selectExistingSheet" class="text-[11px] bg-white border border-blue-200 rounded px-1.5 py-0.5 text-slate-700"></select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column Parsing Controls -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-xs font-medium text-slate-700">OCR Engine:</span>
+              <span id="ocrModeLabel" class="text-xs font-semibold text-emerald-700 ml-1">Built-in Offline</span>
+            </div>
+            <button id="btnTrySample" class="text-xs font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2">
+              Load Sample A4
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3: Image Queue & Direct Upload -->
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">
+                Step 3 &bull; A4 Pages Queue
+              </span>
+              <span id="queueCountBadge" class="text-xs font-semibold text-slate-600">0 pages</span>
+            </div>
+            <h2 class="text-base font-semibold text-slate-900 mb-1">Received &amp; Uploaded Pages</h2>
+            <p class="text-xs text-slate-500 mb-3">Photos sent from mobile appear here in exact sequence. You can also upload from laptop.</p>
+
+            <!-- Dropzone -->
+            <label for="inputLaptopImages" class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50/30 rounded-xl p-4 cursor-pointer transition text-center mb-3">
+              <svg class="w-6 h-6 text-slate-400 mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span class="text-xs font-medium text-slate-700">Click to add A4 images (multiple allowed)</span>
+              <input id="inputLaptopImages" type="file" accept="image/*" multiple class="hidden" />
+            </label>
+
+            <!-- Queue Thumbnails -->
+            <div id="laptopQueueList" class="grid grid-cols-3 gap-2 max-h-[150px] overflow-y-auto pr-1">
+              <div class="col-span-3 text-center py-4 text-xs text-slate-400">No A4 pages in queue yet</div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex gap-2">
+            <button id="btnConvertQueue" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+              Convert to Table
+            </button>
+            <button id="btnClearQueue" class="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition">
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OCR Progress Bar -->
+      <div id="ocrProgressBox" class="hidden bg-white border border-emerald-200 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-1.5">
+          <span id="ocrStatusText" class="text-xs font-semibold text-emerald-800">Processing Page 1...</span>
+          <span id="ocrPercentText" class="text-xs font-mono text-emerald-700">0%</span>
+        </div>
+        <div class="w-full bg-emerald-100 rounded-full h-2 overflow-hidden">
+          <div id="ocrProgressBar" class="bg-emerald-600 h-2 rounded-full transition-all duration-200" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Table Preview & Export Section -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Structured Excel Preview (Rows &amp; Columns)</span>
+              <span id="tableStatsBadge" class="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">0 rows &times; 0 cols</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Click any cell to edit. New pages append sequentially below existing rows.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="gridInfoBadge" class="hidden text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-xl">Grid: Auto</span>
+            <select id="splitModeSelect" title="Choose how to split rows & columns" class="text-[11px] font-medium bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-emerald-500">
+              <option value="auto">Split: Auto (Lines First)</option>
+              <option value="both">Split: Vertical + Horizontal Lines</option>
+              <option value="vertical">Split: Vertical Lines Only (Cols)</option>
+              <option value="horizontal">Split: Horizontal Lines Only (Rows)</option>
+              <option value="gap">Split: Space / Gap Only</option>
+            </select>
+            <div id="colSensitivityBox" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+              <label for="colSensitivity" class="text-[11px] font-medium text-slate-600">Gap:</label>
+              <input id="colSensitivity" type="range" min="10" max="80" value="28" class="w-14 accent-emerald-600" />
+            </div>
+            <button id="btnAddRow" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Row</button>
+            <button id="btnAddCol" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Col</button>
+            <button id="btnClearTable" class="px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-xs font-medium text-rose-700">Reset</button>
+            <button id="btnDownloadExcel" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-1.5 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span id="btnDownloadLabel">Download Excel (.xlsx)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Spreadsheet Grid -->
+        <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+          <table id="previewTable" class="w-full text-left border-collapse">
+            <thead id="previewThead" class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200"></thead>
+            <tbody id="previewTbody" class="divide-y divide-slate-100">
+              <tr>
+                <td class="p-10 text-center text-sm text-slate-400">
+                  No table data yet. Scan QR from mobile, upload A4 photos, or click <strong>Load Sample A4</strong>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MOBILE CAMERA VIEW ==================== -->
+    <section id="viewMobile" class="hidden max-w-lg mx-auto space-y-5">
+
+      <!-- Connection Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-bold text-slate-900">Wireless Laptop Connection</h2>
+          <span id="mobileConnBadge" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+            Standalone Mode
+          </span>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mb-2.5">Choose how you want to link with your Laptop:</p>
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 mb-3">
+          <button id="btnMobMethodOtpShow" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-slate-900 shadow-xs transition">My OTP</button>
+          <button id="btnMobMethodOtpEnter" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Enter Laptop OTP</button>
+          <button id="btnMobMethodQr" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Scan QR</button>
+        </div>
+
+        <!-- Panel 1: Show Mobile's own unique OTP -->
+        <div id="mobPanelOtpShow" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+          <div>
+            <div class="text-[11px] font-semibold text-slate-700">Your Mobile OTP</div>
+            <div class="text-[10px] text-slate-500">Type this in Laptop &rarr; Enter Mobile OTP</div>
+          </div>
+          <span id="mobileOwnOtpDisplay" class="text-base font-bold font-mono tracking-widest text-blue-700 select-all">------</span>
+        </div>
+
+        <!-- Panel 2: Open Laptop OTP Pop-up -->
+        <div id="mobPanelOtpEnter" class="hidden">
+          <button id="btnOpenMobileOtpModal" class="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+            Open OTP Pop-up &amp; Enter Laptop OTP
+          </button>
+        </div>
+
+        <!-- Panel 3: Scan Laptop QR -->
+        <div id="mobPanelQr" class="hidden">
+          <button id="btnScanQrMobile" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
+            Open Camera to Scan Laptop QR
+          </button>
+        </div>
+
+        <!-- Inline QR Scanner Video (if opened directly on mobile) -->
+        <div id="qrScannerBox" class="hidden mt-3 rounded-xl overflow-hidden bg-black relative">
+          <video id="qrVideo" class="w-full h-56 object-cover" playsinline muted></video>
+          <canvas id="qrScanCanvas" class="hidden"></canvas>
+          <button id="btnCloseQrScanner" class="absolute top-2 right-2 bg-white/90 text-slate-900 text-xs font-semibold px-2.5 py-1 rounded-lg">Close</button>
+          <div class="absolute bottom-2 inset-x-2 text-center text-[11px] text-white bg-black/60 py-1 rounded-lg">Point camera at Laptop QR code</div>
+        </div>
+      </div>
+
+      <!-- Camera Capture Studio -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Click A4 Pages in Sequence</h2>
+            <p class="text-xs text-slate-500">Take multiple photos one after another, then send together.</p>
+          </div>
+          <span id="mobileQueueCount" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">0</span>
+        </div>
+
+        <!-- Live Camera / File Picker Buttons -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="btnToggleLiveCam" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>Live Camera</span>
+          </button>
+
+          <label for="inputMobileGallery" class="py-3 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Pick / Camera</span>
+            <input id="inputMobileGallery" type="file" accept="image/*" capture="environment" multiple class="hidden" />
+          </label>
+        </div>
+
+        <!-- Live Camera Viewfinder -->
+        <div id="liveCamBox" class="hidden relative rounded-2xl overflow-hidden bg-black">
+          <video id="liveCamVideo" class="w-full h-72 object-cover" playsinline muted></video>
+          <canvas id="liveCamCanvas" class="hidden"></canvas>
+          <div class="absolute bottom-3 inset-x-0 flex items-center justify-center gap-4">
+            <button id="btnSnapPhoto" class="w-14 h-14 rounded-full bg-white border-4 border-emerald-500 shadow-lg active:scale-95 transition flex items-center justify-center">
+              <span class="w-10 h-10 rounded-full bg-emerald-600"></span>
+            </button>
+            <button id="btnStopLiveCam" class="px-3 py-1.5 rounded-lg bg-black/70 text-white text-xs font-medium">Done</button>
+          </div>
+        </div>
+
+        <!-- Captured Sequence List -->
+        <div id="mobileQueueList" class="grid grid-cols-3 gap-2.5 min-h-[90px]">
+          <div class="col-span-3 text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+            No photos clicked yet. Tap Live Camera or Pick / Camera above.
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-2 pt-2">
+          <button id="btnSendToLaptop" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50">
+            Send All Pages to Laptop (Wireless)
+          </button>
+          <button id="btnConvertOnMobile" class="w-full py-2.5 rounded-xl border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold transition">
+            Or Convert Directly on This Phone
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  </div>
+
+  <!-- OTP Pairing Pop-up Modal -->
+  <div id="otpModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="otpModalTitle" class="text-base font-bold text-slate-900">Enter 6-Digit OTP</h3>
+        <button id="btnCloseOtpModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+      </div>
+      <p id="otpModalDesc" class="text-xs text-slate-500">Enter the 6-digit OTP shown on the other device to link wirelessly.</p>
+      <div>
+        <input id="inputOtpCode" type="text" inputmode="numeric" maxlength="12" placeholder="e.g. 482910" class="w-full px-4 py-3 text-center text-xl font-bold font-mono tracking-widest border-2 border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="btnCancelOtpModal" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold">Cancel</button>
+        <button id="btnSubmitOtpModal" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Connect Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900">OCR &amp; Table Extraction Settings</h3>
+        <button id="btnCloseSettings" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-600">
+        <div>
+          <label class="block font-semibold text-slate-800 mb-1">Extraction Engine</label>
+          <select id="selectEngine" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white">
+            <option value="tesseract">Built-in Tesseract.js (100% Free, No API Key)</option>
+            <option value="gemini">Gemini Vision API (Optional Free Key for Complex Tables)</option>
+          </select>
+        </div>
+
+        <div id="geminiKeyBox" class="hidden space-y-1.5">
+          <label class="block font-semibold text-slate-800">Google AI Studio Gemini API Key (Stored locally in browser)</label>
+          <input id="inputGeminiKey" type="password" placeholder="AIzaSy..." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono" />
+          <p class="text-[11px] text-slate-500">Never sent to any server except Google's official API directly from your browser.</p>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-800 mb-1">OCR Language (for Built-in Engine)</label>
+          <select id="selectOcrLang" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white">
+            <option value="eng">English (eng)</option>
+            <option value="eng+hin">English + Hindi (eng+hin)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnSaveSettings" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ==================== STATE ====================
+      const state = {
+        mode: 'laptop', // 'laptop' | 'mobile'
+        targetMode: 'new', // 'new' | 'append'
+        laptopQueue: [], // { id, name, dataUrl }
+        mobileQueue: [], // { id, name, dataUrl }
+        tableRows: [], // Array of string arrays: [[col1, col2...], ...]
+        lastTesseractWords: null, // cached for live colSensitivity re-clustering
+        lastOcrPages: [], // { words, gridLines, width, height }
+        splitMode: 'auto', // 'auto' | 'grid' | 'gap'
+        otpModalTarget: 'mobile-to-laptop', // 'mobile-to-laptop' | 'laptop-to-mobile'
+        myOtp: '', 
+        existingWorkbook: null,
+        existingSheetNames: [],
+        existingSelectedSheet: '',
+        existingRows: [],
+        existingFileName: '',
+        peer: null,
+        mobilePeer: null,
+        peerId: '',
+        mobilePeerId: '',
+        mobileConn: null,
+        liveStream: null,
+        qrStream: null,
+        qrScanRaf: null,
+        engine: 'tesseract',
+        geminiKey: '',
+        ocrLang: 'eng',
+        currentUser: null,
+        pendingOtp: '',
+        pendingOtpTarget: '',
+        pendingConnectParam: ''
+      };
+
+      // ==================== DOM REFS ====================
+      const $ = (id) => document.getElementById(id);
+
+      // ==================== TOAST ====================
+      function showToast(msg, type = 'info') {
+        const colors = {
+          info: 'bg-slate-900 text-white',
+          success: 'bg-emerald-600 text-white',
+          error: 'bg-rose-600 text-white',
+          warn: 'bg-amber-500 text-white'
+        };
+        const el = document.createElement('div');
+        el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-medium transition-all ${colors[type] || colors.info}`;
+        el.textContent = msg;
+        $('toastContainer').appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 300);
+        }, 3500);
+      }
+
+      // ==================== STORAGE HELPERS ====================
+      function loadSettings() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(getUserStorageKey('settings')) || '{}');
+          if (saved.engine) state.engine = saved.engine;
+          if (saved.geminiKey) state.geminiKey = saved.geminiKey;
+          if (saved.ocrLang) state.ocrLang = saved.ocrLang;
+        } catch (e) {}
+        $('selectEngine').value = state.engine;
+        $('inputGeminiKey').value = state.geminiKey;
+        $('selectOcrLang').value = state.ocrLang;
+        $('geminiKeyBox').classList.toggle('hidden', state.engine !== 'gemini');
+        $('ocrModeLabel').textContent = state.engine === 'gemini' ? 'Gemini Vision AI' : 'Built-in Offline';
+      }
+
+      function saveSettings() {
+        state.engine = $('selectEngine').value;
+        state.geminiKey = $('inputGeminiKey').value.trim();
+        state.ocrLang = $('selectOcrLang').value;
+        try {
+          localStorage.setItem(getUserStorageKey('settings'), JSON.stringify({
+            engine: state.engine,
+            geminiKey: state.geminiKey,
+            ocrLang: state.ocrLang
+          }));
+        } catch (e) {}
+        $('ocrModeLabel').textContent = state.engine === 'gemini' ? 'Gemini Vision AI' : 'Built-in Offline';
+        $('settingsModal').classList.add('hidden');
+        showToast('Settings saved', 'success');
+      }
+
+      // ==================== MODE SWITCHING ====================
+      function switchMode(mode) {
+        state.mode = mode;
+        const isLaptop = mode === 'laptop';
+        $('viewLaptop').classList.toggle('hidden', !isLaptop);
+        $('viewMobile').classList.toggle('hidden', isLaptop);
+        $('btnModeLaptop').className = `px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 ${isLaptop ? 'tab-active' : 'tab-inactive'}`;
+        $('btnModeMobile').className = `px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 ${!isLaptop ? 'tab-active' : 'tab-inactive'}`;
+        if (isLaptop) stopLiveCamera();
+      }
+
+      // ==================== PEERJS WIRELESS LINK ====================
+      function normalizePeerId(raw) {
+        const clean = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!clean) return '';
+        if (/^\d{6}$/.test(clean)) return 'S2S-' + clean;
+        return clean;
+      }
+
+      function getMobileConnectUrl(peerId) {
+        const custom = ($('inputCustomHostUrl')?.value || '').trim().split('?')[0].split('#')[0];
+        if (custom.startsWith('http://') || custom.startsWith('https://')) {
+          return `${custom}?connect=${encodeURIComponent(peerId)}`;
+        }
+        const href = window.location.href || '';
+        const base = href.split('?')[0].split('#')[0];
+        if (base.startsWith('http://') || base.startsWith('https://')) {
+          return `${base}?connect=${encodeURIComponent(peerId)}`;
+        }
+        return peerId;
+      }
+
+      function setupIncomingConn(conn) {
+        conn.on('open', () => {
+          state.mobileConn = conn;
+          if (state.mode === 'laptop') {
+            $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span> Mobile Linked';
+            $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full';
+          } else {
+            $('mobileConnBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Laptop Linked';
+            $('mobileConnBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full';
+          }
+          showToast('Devices connected wirelessly!', 'success');
+        });
+
+        conn.on('data', (payload) => {
+          if (!payload || typeof payload !== 'object') return;
+          if (payload.type === 'image-batch-item') {
+            state.laptopQueue.push({
+              id: payload.id || ('img-' + Date.now() + '-' + Math.random()),
+              name: payload.name || `Page_${state.laptopQueue.length + 1}.jpg`,
+              dataUrl: payload.dataUrl
+            });
+            renderLaptopQueue();
+          } else if (payload.type === 'batch-complete') {
+            showToast(`Received ${payload.count} page(s) in sequence from mobile!`, 'success');
+            conn.send({ type: 'ack', count: payload.count });
+          } else if (payload.type === 'ack') {
+            showToast(`Laptop received ${payload.count} pages!`, 'success');
+          } else if (payload.type === 'laptop-ready') {
+            state.mobileConn = conn;
+            $('mobileConnBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Linked to Laptop';
+            $('mobileConnBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full';
+            showToast('Laptop connected to this mobile!', 'success');
+          }
+        });
+
+        conn.on('close', () => {
+          if (state.mobileConn === conn) state.mobileConn = null;
+          if (state.mode === 'mobile') {
+            $('mobileConnBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Disconnected';
+            $('mobileConnBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full';
+          }
+        });
+      }
+
+      function initLocalPeer() {
+        if (state.peer) {
+          try { state.peer.destroy(); } catch (e) {}
+        }
+        if (state.mobilePeer) {
+          try { state.mobilePeer.destroy(); } catch (e) {}
+        }
+        const laptopOtp = String(Math.floor(100000 + Math.random() * 900000));
+        let mobileOtp = String(Math.floor(100000 + Math.random() * 900000));
+        while (mobileOtp === laptopOtp) {
+          mobileOtp = String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        const laptopId = 'S2S-' + laptopOtp;
+        const mobileId = 'S2S-' + mobileOtp;
+        state.myOtp = laptopOtp;
+        state.peerId = laptopId;
+        state.mobilePeerId = mobileId;
+
+        $('peerOtpDisplay').textContent = laptopOtp;
+        $('mobileOwnOtpDisplay').textContent = mobileOtp;
+        $('peerIdDisplay').textContent = `ID: ${laptopId}`;
+        renderQRCode(getMobileConnectUrl(laptopId));
+
+        $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Connecting...';
+        $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full';
+
+        try {
+          const peer = new Peer(laptopId);
+          state.peer = peer;
+          peer.on('open', (id) => {
+            state.peerId = id;
+            $('peerIdDisplay').textContent = `ID: ${id}`;
+            $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready for Mobile';
+            $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full';
+            renderQRCode(getMobileConnectUrl(id));
+          });
+          peer.on('connection', (conn) => setupIncomingConn(conn));
+          peer.on('error', () => {
+            $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Offline / Local Only';
+            $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full';
+          });
+
+          const mPeer = new Peer(mobileId);
+          state.mobilePeer = mPeer;
+          mPeer.on('connection', (conn) => setupIncomingConn(conn));
+        } catch (err) {
+          $('peerIdDisplay').textContent = 'Wireless unavailable (use local upload)';
+        }
+      }
+
+      function renderQRCode(url) {
+        const container = $('qrContainer');
+        container.innerHTML = '';
+        const qrText = (url && url.length <= 220) ? url : (state.peerId || 'S2S-PAIR');
+        if (typeof QRCode !== 'undefined') {
+          try {
+            new QRCode(container, {
+              text: qrText,
+              width: 150,
+              height: 150,
+              colorDark: '#0f172a',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.L
+            });
+            return;
+          } catch (e) {}
+        }
+        container.innerHTML = `<div class="p-3 text-center text-xs text-slate-600 font-mono bg-slate-50 rounded-lg border border-slate-200">${qrText}</div>`;
+      }
+
+      function connectToRemotePeer(rawCode, fromMode) {
+        const targetId = normalizePeerId(rawCode);
+        if (!targetId) {
+          showToast('Please enter a valid 6-digit OTP', 'warn');
+          return;
+        }
+        if (fromMode === 'mobile') {
+          $('mobileConnBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Linking...';
+        } else {
+          $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Linking Mobile...';
+        }
+        try {
+          if (!state.peer) {
+            state.peer = new Peer();
+            state.peer.on('open', () => openDataConn(targetId, fromMode));
+            state.peer.on('error', () => {
+              showToast('Could not reach OTP. Check code or network.', 'error');
+            });
+          } else if (state.peer.open) {
+            openDataConn(targetId, fromMode);
+          } else {
+            state.peer.once('open', () => openDataConn(targetId, fromMode));
+          }
+        } catch (e) {
+          showToast('Peer connection error', 'error');
+        }
+      }
+
+      function openDataConn(targetId, fromMode) {
+        const activePeer = (fromMode === 'mobile' && state.mobilePeer && state.mobilePeer.open) ? state.mobilePeer : state.peer;
+        const conn = activePeer.connect(targetId, { reliable: true });
+        setupIncomingConn(conn);
+        conn.on('open', () => {
+          state.mobileConn = conn;
+          if (fromMode === 'laptop') {
+            conn.send({ type: 'laptop-ready' });
+            $('laptopPeerBadge').innerHTML = '<span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span> Mobile Linked';
+            $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full';
+          } else {
+            $('mobileConnBadge').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Linked: ${targetId.replace('S2S-', '')}`;
+            $('mobileConnBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full';
+          }
+        });
+      }
+
+      function openOtpModal(target) {
+        state.otpModalTarget = target;
+        if (target === 'laptop-to-mobile') {
+          $('otpModalTitle').textContent = 'Enter Mobile OTP';
+          $('otpModalDesc').textContent = 'Enter the 6-digit OTP shown on your Mobile Camera screen to link it to this laptop.';
+        } else {
+          $('otpModalTitle').textContent = 'Enter Laptop OTP';
+          $('otpModalDesc').textContent = 'Enter the 6-digit OTP shown on your Laptop Studio screen to connect wirelessly.';
+        }
+        $('inputOtpCode').value = '';
+        $('otpModal').classList.remove('hidden');
+        setTimeout(() => $('inputOtpCode').focus(), 50);
+      }
+
+      // ==================== IMAGE COMPRESSION & QUEUE ====================
+      function compressImageFile(file, maxDim = 1800) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              let w = img.width;
+              let h = img.height;
+              if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                  h = Math.round((h * maxDim) / w);
+                  w = maxDim;
+                } else {
+                  w = Math.round((w * maxDim) / h);
+                  h = maxDim;
+                }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', 0.86));
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function renderQueue(listEl, queue, isMobile) {
+        if (isMobile) {
+          $('mobileQueueCount').textContent = `${queue.length} page${queue.length === 1 ? '' : 's'}`;
+        } else {
+          $('queueCountBadge').textContent = `${queue.length} page${queue.length === 1 ? '' : 's'}`;
+        }
+        if (queue.length === 0) {
+          listEl.innerHTML = `<div class="col-span-3 text-center py-5 text-xs text-slate-400">${isMobile ? 'No photos clicked yet.' : 'No A4 pages in queue yet'}</div>`;
+          return;
+        }
+        listEl.innerHTML = queue.map((item, idx) => `
+          <div class="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-[3/4]">
+            <img src="${item.dataUrl}" alt="Page ${idx + 1}" class="w-full h-full object-cover" />
+            <span class="absolute top-1 left-1 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">#${idx + 1}</span>
+            <button data-remove-idx="${idx}" data-queue="${isMobile ? 'mobile' : 'laptop'}" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center opacity-90 hover:opacity-100">&times;</button>
+          </div>
+        `).join('');
+      }
+
+      function renderLaptopQueue() {
+        renderQueue($('laptopQueueList'), state.laptopQueue, false);
+      }
+
+      function renderMobileQueue() {
+        renderQueue($('mobileQueueList'), state.mobileQueue, true);
+      }
+
+      // ==================== EXISTING EXCEL HANDLING ====================
+      function setTargetMode(mode) {
+        state.targetMode = mode;
+        const isNew = mode === 'new';
+        $('btnTargetNew').className = `p-3 rounded-xl border-2 text-left transition ${isNew ? 'border-emerald-600 bg-emerald-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`;
+        $('btnTargetAppend').className = `p-3 rounded-xl border-2 text-left transition ${!isNew ? 'border-blue-600 bg-blue-50/60' : 'border-slate-200 bg-white hover:bg-slate-50'}`;
+        $('panelNewExcel').classList.toggle('hidden', !isNew);
+        $('panelAppendExcel').classList.toggle('hidden', isNew);
+        $('btnDownloadLabel').textContent = isNew ? 'Download Excel (.xlsx)' : 'Download Updated Excel (.xlsx)';
+      }
+
+      function loadExistingExcelFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array' });
+            state.existingWorkbook = wb;
+            state.existingSheetNames = wb.SheetNames || [];
+            state.existingFileName = file.name;
+
+            const select = $('selectExistingSheet');
+            select.innerHTML = state.existingSheetNames.map((n) => `<option value="${n}">${n}</option>`).join('');
+            selectExistingSheet(state.existingSheetNames[0]);
+            $('existingExcelInfo').classList.remove('hidden');
+            showToast(`Loaded "${file.name}" (${state.existingRows.length} existing rows)`, 'success');
+          } catch (err) {
+            showToast('Could not read Excel file. Please check format.', 'error');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      function selectExistingSheet(sheetName) {
+        if (!state.existingWorkbook || !sheetName) return;
+        state.existingSelectedSheet = sheetName;
+        const ws = state.existingWorkbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        // Trim trailing completely empty rows
+        while (rows.length > 0 && rows[rows.length - 1].every((c) => String(c).trim() === '')) {
+          rows.pop();
+        }
+        state.existingRows = rows;
+        $('existingFileName').textContent = state.existingFileName;
+        $('existingRowCount').textContent = `${rows.length} rows`;
+        $('nextRowNum').textContent = `Row ${rows.length + 1}`;
+      }
+
+      // ==================== TABLE EXTRACTION ENGINE (GRID-LINE AWARE) ====================
+      // Detect horizontal and vertical table border lines using adaptive integral-image thresholding
+      function detectTableGridLines(dataUrl) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const W = img.width;
+            const H = img.height;
+            const canvas = document.createElement('canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, W, H);
+            const rgba = ctx.getImageData(0, 0, W, H).data;
+
+            // Grayscale + Integral Image for adaptive local thresholding
+            const gray = new Uint8Array(W * H);
+            const integral = new Int32Array((W + 1) * (H + 1));
+            for (let y = 0; y < H; y++) {
+              let rowSum = 0;
+              const yOff = y * W;
+              const intCur = (y + 1) * (W + 1);
+              const intPrev = y * (W + 1);
+              for (let x = 0; x < W; x++) {
+                const idx = (yOff + x) * 4;
+                const g = (rgba[idx] * 77 + rgba[idx + 1] * 150 + rgba[idx + 2] * 29) >> 8;
+                gray[yOff + x] = g;
+                rowSum += g;
+                integral[intCur + x + 1] = integral[intPrev + x + 1] + rowSum;
+              }
+            }
+
+            // Binary dark mask (1 = dark line/ink, 0 = paper)
+            const halfWin = 15;
+            const dark = new Uint8Array(W * H);
+            for (let y = 0; y < H; y++) {
+              const y1 = Math.max(0, y - halfWin);
+              const y2 = Math.min(H - 1, y + halfWin);
+              const intY1 = y1 * (W + 1);
+              const intY2 = (y2 + 1) * (W + 1);
+              const yOff = y * W;
+              for (let x = 0; x < W; x++) {
+                const x1 = Math.max(0, x - halfWin);
+                const x2 = Math.min(W - 1, x + halfWin);
+                const area = (x2 - x1 + 1) * (y2 - y1 + 1);
+                const sum = integral[intY2 + x2 + 1] - integral[intY1 + x2 + 1] - integral[intY2 + x1] + integral[intY1 + x1];
+                const localMean = sum / area;
+                const g = gray[yOff + x];
+                if (g < localMean - 12 && g < 215) {
+                  dark[yOff + x] = 1;
+                }
+              }
+            }
+
+            // Helper: cluster adjacent 1D indices into line centers
+            function clusterPositions(indices, maxGap = 6) {
+              if (indices.length === 0) return [];
+              const groups = [];
+              let cur = [indices[0]];
+              for (let i = 1; i < indices.length; i++) {
+                if (indices[i] - indices[i - 1] <= maxGap) {
+                  cur.push(indices[i]);
+                } else {
+                  groups.push(Math.round(cur.reduce((a, b) => a + b, 0) / cur.length));
+                  cur = [indices[i]];
+                }
+              }
+              groups.push(Math.round(cur.reduce((a, b) => a + b, 0) / cur.length));
+              return groups;
+            }
+
+            // 1. Detect Horizontal Lines (longest contiguous dark run >= 25% of width)
+            const minHRun = Math.max(120, Math.floor(W * 0.25));
+            const hCandidates = [];
+            for (let y = 0; y < H; y++) {
+              let run = 0;
+              let maxRun = 0;
+              let gap = 0;
+              const yOff = y * W;
+              for (let x = 0; x < W; x++) {
+                if (dark[yOff + x]) {
+                  run += 1 + gap;
+                  gap = 0;
+                  if (run > maxRun) maxRun = run;
+                } else {
+                  gap++;
+                  if (gap > 4) {
+                    run = 0;
+                    gap = 0;
+                  }
+                }
+              }
+              if (maxRun >= minHRun) hCandidates.push(y);
+            }
+            const hLines = clusterPositions(hCandidates, 6);
+
+            // 2. Detect Vertical Lines (longest contiguous dark run >= 18% of height)
+            const minVRun = Math.max(100, Math.floor(H * 0.18));
+            const vCandidates = [];
+            for (let x = 0; x < W; x++) {
+              let run = 0;
+              let maxRun = 0;
+              let gap = 0;
+              for (let y = 0; y < H; y++) {
+                if (dark[y * W + x]) {
+                  run += 1 + gap;
+                  gap = 0;
+                  if (run > maxRun) maxRun = run;
+                } else {
+                  gap++;
+                  if (gap > 4) {
+                    run = 0;
+                    gap = 0;
+                  }
+                }
+              }
+              if (maxRun >= minVRun) vCandidates.push(x);
+            }
+            const vLines = clusterPositions(vCandidates, 6);
+
+            resolve({ hLines, vLines, width: W, height: H });
+          };
+          img.onerror = () => resolve({ hLines: [], vLines: [], width: 0, height: 0 });
+          img.src = dataUrl;
+        });
+      }
+
+      // Join words inside a single table cell in natural reading order (top-to-bottom, left-to-right)
+      function joinCellWords(cellWords) {
+        if (!cellWords || cellWords.length === 0) return '';
+        const sorted = [...cellWords].sort((a, b) => a.yc - b.yc);
+        const lines = [];
+        let curLine = [sorted[0]];
+        let avgY = sorted[0].yc;
+        let avgH = sorted[0].h;
+        for (let i = 1; i < sorted.length; i++) {
+          const w = sorted[i];
+          if (Math.abs(w.yc - avgY) <= Math.max(avgH, w.h) * 0.55) {
+            curLine.push(w);
+            avgY = curLine.reduce((s, item) => s + item.yc, 0) / curLine.length;
+            avgH = curLine.reduce((s, item) => s + item.h, 0) / curLine.length;
+          } else {
+            lines.push(curLine);
+            curLine = [w];
+            avgY = w.yc;
+            avgH = w.h;
+          }
+        }
+        lines.push(curLine);
+        return lines
+          .map((line) => line.sort((a, b) => a.x0 - b.x0).map((w) => w.text).join(' '))
+          .join(' ')
+          .trim();
+      }
+
+      // Build table strictly using detected vertical & horizontal grid lines
+      function buildTableFromGrid(words, gridLines, imgWidth, imgHeight, colGapThreshold, splitMode = 'auto') {
+        if (!words || words.length === 0) return [];
+        const clean = words
+          .filter((w) => w.text && w.text.trim().length > 0 && w.bbox)
+          .map((w) => ({
+            text: w.text.trim(),
+            x0: w.bbox.x0,
+            x1: w.bbox.x1,
+            y0: w.bbox.y0,
+            y1: w.bbox.y1,
+            xc: (w.bbox.x0 + w.bbox.x1) / 2,
+            yc: (w.bbox.y0 + w.bbox.y1) / 2,
+            h: Math.max(8, w.bbox.y1 - w.bbox.y0)
+          }));
+        if (clean.length === 0) return [];
+
+        const hLines = (splitMode === 'vertical') ? [] : (gridLines?.hLines || []);
+        const vLines = (splitMode === 'horizontal') ? [] : (gridLines?.vLines || []);
+
+        // If no vertical lines at all, fall back to gap clustering (or row-line + gap)
+        if (vLines.length === 0 && hLines.length < 2) {
+          return buildTableFromWords(words, colGapThreshold);
+        }
+
+        // Build column intervals from vLines (and outer regions if words exist outside outer borders)
+        let colBounds = [];
+        if (vLines.length >= 1) {
+          if (clean.some((w) => w.xc < vLines[0] - 8)) {
+            colBounds.push([0, vLines[0]]);
+          }
+          for (let i = 0; i < vLines.length - 1; i++) {
+            if (vLines[i + 1] - vLines[i] > 12) {
+              colBounds.push([vLines[i], vLines[i + 1]]);
+            }
+          }
+          if (clean.some((w) => w.xc > vLines[vLines.length - 1] + 8)) {
+            colBounds.push([vLines[vLines.length - 1], imgWidth || 99999]);
+          }
+        }
+
+        // Build row intervals from hLines (or Y-clustering if < 2 hLines)
+        let rowBounds = [];
+        if (hLines.length >= 2) {
+          if (clean.some((w) => w.yc < hLines[0] - 8)) {
+            rowBounds.push([0, hLines[0]]);
+          }
+          for (let i = 0; i < hLines.length - 1; i++) {
+            if (hLines[i + 1] - hLines[i] > 10) {
+              rowBounds.push([hLines[i], hLines[i + 1]]);
+            }
+          }
+          if (clean.some((w) => w.yc > hLines[hLines.length - 1] + 8)) {
+            rowBounds.push([hLines[hLines.length - 1], imgHeight || 99999]);
+          }
+        }
+
+        // Case A: Both horizontal & vertical lines available -> exact cell boxes!
+        if (rowBounds.length > 0 && colBounds.length > 0) {
+          const grid = [];
+          for (const [y0, y1] of rowBounds) {
+            const rowArr = [];
+            for (const [x0, x1] of colBounds) {
+              const cellWords = clean.filter((w) => w.xc >= x0 && w.xc < x1 && w.yc >= y0 && w.yc < y1);
+              rowArr.push(joinCellWords(cellWords));
+            }
+            if (rowArr.some((c) => c !== '')) {
+              grid.push(rowArr);
+            }
+          }
+          return grid;
+        }
+
+        // Case B: Vertical lines only (no horizontal lines) -> cluster rows by Y, map to vLine columns
+        if (colBounds.length > 0) {
+          clean.sort((a, b) => a.yc - b.yc);
+          const rows = [];
+          let curRow = [clean[0]];
+          let avgY = clean[0].yc;
+          let avgH = clean[0].h;
+          for (let i = 1; i < clean.length; i++) {
+            const w = clean[i];
+            if (Math.abs(w.yc - avgY) <= Math.max(avgH, w.h) * 0.6) {
+              curRow.push(w);
+              avgY = curRow.reduce((s, item) => s + item.yc, 0) / curRow.length;
+              avgH = curRow.reduce((s, item) => s + item.h, 0) / curRow.length;
+            } else {
+              rows.push(curRow);
+              curRow = [w];
+              avgY = w.yc;
+              avgH = w.h;
+            }
+          }
+          rows.push(curRow);
+          return rows.map((rowWords) =>
+            colBounds.map(([x0, x1]) => joinCellWords(rowWords.filter((w) => w.xc >= x0 && w.xc < x1)))
+          );
+        }
+
+        // Case C: Horizontal lines only (split rows by hLines, split columns by global X-anchors/gap)
+        if (rowBounds.length > 0 && colBounds.length === 0) {
+          const rowChunksList = [];
+          for (const [y0, y1] of rowBounds) {
+            const rowWords = clean.filter((w) => w.yc >= y0 && w.yc < y1);
+            if (rowWords.length === 0) continue;
+            rowWords.sort((a, b) => a.x0 - b.x0);
+            const chunks = [];
+            let cur = { text: rowWords[0].text, x0: rowWords[0].x0, x1: rowWords[0].x1 };
+            for (let i = 1; i < rowWords.length; i++) {
+              const gap = rowWords[i].x0 - cur.x1;
+              if (gap < colGapThreshold) {
+                cur.text += ' ' + rowWords[i].text;
+                cur.x1 = Math.max(cur.x1, rowWords[i].x1);
+              } else {
+                chunks.push(cur);
+                cur = { text: rowWords[i].text, x0: rowWords[i].x0, x1: rowWords[i].x1 };
+              }
+            }
+            chunks.push(cur);
+            rowChunksList.push(chunks);
+          }
+          if (rowChunksList.length === 0) return [];
+          const allX0 = [];
+          rowChunksList.forEach((r) => r.forEach((c) => allX0.push(c.x0)));
+          allX0.sort((a, b) => a - b);
+          const colAnchors = [];
+          allX0.forEach((x) => {
+            const found = colAnchors.find((a) => Math.abs(a.mean - x) < colGapThreshold * 1.4);
+            if (found) {
+              found.vals.push(x);
+              found.mean = found.vals.reduce((s, v) => s + v, 0) / found.vals.length;
+            } else {
+              colAnchors.push({ mean: x, vals: [x] });
+            }
+          });
+          colAnchors.sort((a, b) => a.mean - b.mean);
+          const numCols = Math.max(1, colAnchors.length);
+          return rowChunksList.map((chunks) => {
+            const rowArr = new Array(numCols).fill('');
+            chunks.forEach((chunk) => {
+              let bestCol = 0;
+              let bestDist = Infinity;
+              colAnchors.forEach((a, idx) => {
+                const d = Math.abs(chunk.x0 - a.mean);
+                if (d < bestDist) { bestDist = d; bestCol = idx; }
+              });
+              rowArr[bestCol] = rowArr[bestCol] ? `${rowArr[bestCol]} ${chunk.text}` : chunk.text;
+            });
+            return rowArr;
+          });
+        }
+
+        // Fallback
+        return buildTableFromWords(words, colGapThreshold);
+      }
+
+      // Fallback: Clusters Tesseract word bounding boxes by space/gap into Rows & Columns
+      function buildTableFromWords(words, colGapThreshold) {
+        if (!words || words.length === 0) return [];
+        const clean = words
+          .filter((w) => w.text && w.text.trim().length > 0 && w.bbox)
+          .map((w) => ({
+            text: w.text.trim(),
+            x0: w.bbox.x0,
+            x1: w.bbox.x1,
+            y0: w.bbox.y0,
+            y1: w.bbox.y1,
+            yc: (w.bbox.y0 + w.bbox.y1) / 2,
+            h: Math.max(8, w.bbox.y1 - w.bbox.y0)
+          }));
+
+        if (clean.length === 0) return [];
+
+        // 1. Group words into horizontal lines (rows)
+        clean.sort((a, b) => a.yc - b.yc);
+        const rows = [];
+        let currentRow = [clean[0]];
+        let avgY = clean[0].yc;
+        let avgH = clean[0].h;
+
+        for (let i = 1; i < clean.length; i++) {
+          const w = clean[i];
+          if (Math.abs(w.yc - avgY) <= Math.max(avgH, w.h) * 0.6) {
+            currentRow.push(w);
+            avgY = currentRow.reduce((s, item) => s + item.yc, 0) / currentRow.length;
+            avgH = currentRow.reduce((s, item) => s + item.h, 0) / currentRow.length;
+          } else {
+            rows.push(currentRow);
+            currentRow = [w];
+            avgY = w.yc;
+            avgH = w.h;
+          }
+        }
+        rows.push(currentRow);
+
+        // 2. Within each row, merge words that are close together into cell-chunks
+        const rowChunks = rows.map((row) => {
+          row.sort((a, b) => a.x0 - b.x0);
+          const chunks = [];
+          let cur = { text: row[0].text, x0: row[0].x0, x1: row[0].x1 };
+          for (let i = 1; i < row.length; i++) {
+            const gap = row[i].x0 - cur.x1;
+            if (gap < colGapThreshold) {
+              cur.text += ' ' + row[i].text;
+              cur.x1 = Math.max(cur.x1, row[i].x1);
+            } else {
+              chunks.push(cur);
+              cur = { text: row[i].text, x0: row[i].x0, x1: row[i].x1 };
+            }
+          }
+          chunks.push(cur);
+          return chunks;
+        });
+
+        // 3. Discover global column X-anchors across all rows
+        const allX0 = [];
+        rowChunks.forEach((r) => r.forEach((c) => allX0.push(c.x0)));
+        allX0.sort((a, b) => a - b);
+
+        const colAnchors = [];
+        allX0.forEach((x) => {
+          const found = colAnchors.find((a) => Math.abs(a.mean - x) < colGapThreshold * 1.4);
+          if (found) {
+            found.vals.push(x);
+            found.mean = found.vals.reduce((s, v) => s + v, 0) / found.vals.length;
+          } else {
+            colAnchors.push({ mean: x, vals: [x] });
+          }
+        });
+        colAnchors.sort((a, b) => a.mean - b.mean);
+        const numCols = Math.max(1, colAnchors.length);
+
+        // 4. Map each chunk to its nearest column anchor
+        const grid = rowChunks.map((chunks) => {
+          const rowArr = new Array(numCols).fill('');
+          chunks.forEach((chunk) => {
+            let bestCol = 0;
+            let bestDist = Infinity;
+            colAnchors.forEach((a, idx) => {
+              const d = Math.abs(chunk.x0 - a.mean);
+              if (d < bestDist) {
+                bestDist = d;
+                bestCol = idx;
+              }
+            });
+            rowArr[bestCol] = rowArr[bestCol] ? `${rowArr[bestCol]} ${chunk.text}` : chunk.text;
+          });
+          return rowArr;
+        });
+
+        return grid;
+      }
+
+      function rebuildFromCachedPages() {
+        if (!state.lastOcrPages || state.lastOcrPages.length === 0) return;
+        const gap = Number($('colSensitivity').value) || 28;
+        const mode = $('splitModeSelect').value || 'auto';
+        let rebuilt = [];
+        state.lastOcrPages.forEach((p) => {
+          if (mode === 'gap') {
+            rebuilt = rebuilt.concat(buildTableFromWords(p.words, gap));
+          } else {
+            rebuilt = rebuilt.concat(buildTableFromGrid(p.words, p.gridLines, p.width, p.height, gap, mode));
+          }
+        });
+        state.tableRows = rebuilt;
+        renderTablePreview();
+      }
+
+      async function extractWithGemini(dataUrl) {
+        const base64 = dataUrl.split(',')[1];
+        const mime = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(state.geminiKey)}`;
+        const body = {
+          contents: [{
+            parts: [
+              { text: 'Extract the printed table/data from this A4 page into a strict JSON 2D array of strings (rows and columns). Split cells strictly according to the printed vertical and horizontal table grid lines—keep multi-word text inside the same bordered cell together in one string rather than splitting on spaces. Return ONLY valid JSON array like [["Col1","Col2"],["Val1","Val2"]] with no markdown fences.' },
+              { inline_data: { mime_type: mime, data: base64 } }
+            ]
+          }]
+        };
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('Gemini API error');
+        const json = await res.json();
+        let text = json.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        text = text.replace(/```json|```/gi, '').trim();
+        const parsed = JSON.parse(text);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+
+      async function processImageQueue(queue) {
+        if (!queue || queue.length === 0) {
+          showToast('Add at least 1 A4 page image first', 'warn');
+          return;
+        }
+
+        $('ocrProgressBox').classList.remove('hidden');
+        $('btnConvertQueue').disabled = true;
+        const colGap = Number($('colSensitivity').value) || 28;
+        const splitMode = $('splitModeSelect').value || 'auto';
+        const allExtractedWords = [];
+        const allOcrPages = [];
+        const newRows = [];
+        let totalV = 0;
+        let totalH = 0;
+
+        try {
+          if (state.engine === 'gemini' && state.geminiKey) {
+            for (let i = 0; i < queue.length; i++) {
+              const pct = Math.round(((i) / queue.length) * 100);
+              $('ocrStatusText').textContent = `Gemini Vision extracting Page ${i + 1} of ${queue.length}...`;
+              $('ocrPercentText').textContent = `${pct}%`;
+              $('ocrProgressBar').style.width = `${pct}%`;
+              const pageRows = await extractWithGemini(queue[i].dataUrl);
+              pageRows.forEach((r) => newRows.push(r.map((c) => String(c ?? ''))));
+            }
+          } else {
+            const worker = await Tesseract.createWorker(state.ocrLang, 1, {
+              logger: (m) => {
+                if (m.status === 'recognizing text') {
+                  const p = Math.round((m.progress || 0) * 100);
+                  $('ocrPercentText').textContent = `${p}%`;
+                  $('ocrProgressBar').style.width = `${p}%`;
+                }
+              }
+            });
+
+            for (let i = 0; i < queue.length; i++) {
+              $('ocrStatusText').textContent = `Detecting grid lines & reading Page ${i + 1} of ${queue.length}...`;
+              const gridLines = await detectTableGridLines(queue[i].dataUrl);
+              totalV += gridLines.vLines.length;
+              totalH += gridLines.hLines.length;
+              const result = await worker.recognize(queue[i].dataUrl);
+              const words = result?.data?.words || [];
+              allExtractedWords.push(words);
+              allOcrPages.push({ words, gridLines, width: gridLines.width, height: gridLines.height });
+
+              const pageGrid = splitMode === 'gap'
+                ? buildTableFromWords(words, colGap)
+                : buildTableFromGrid(words, gridLines, gridLines.width, gridLines.height, colGap, splitMode);
+              pageGrid.forEach((r) => newRows.push(r));
+            }
+            await worker.terminate();
+            state.lastTesseractWords = allExtractedWords;
+            state.lastOcrPages = allOcrPages;
+
+            if (totalV > 0 || totalH > 0) {
+              $('gridInfoBadge').textContent = `Grid: ${totalV}V × ${totalH}H lines`;
+              $('gridInfoBadge').classList.remove('hidden');
+            } else {
+              $('gridInfoBadge').textContent = 'No lines (Gap mode)';
+              $('gridInfoBadge').classList.remove('hidden');
+            }
+          }
+
+          $('ocrProgressBar').style.width = '100%';
+          $('ocrPercentText').textContent = '100%';
+
+          if (newRows.length === 0) {
+            showToast('No readable text found in images. Try clearer lighting.', 'warn');
+          } else {
+            state.tableRows = state.tableRows.concat(newRows);
+            normalizeTableWidths();
+            renderTablePreview();
+            showToast(`Extracted ${newRows.length} rows (${totalV > 0 ? 'by grid lines' : 'by spacing'})!`, 'success');
+          }
+        } catch (err) {
+          showToast('Extraction failed: ' + (err.message || 'Check image or API key'), 'error');
+        } finally {
+          $('btnConvertQueue').disabled = false;
+          setTimeout(() => $('ocrProgressBox').classList.add('hidden'), 1200);
+        }
+      }
+
+      function normalizeTableWidths() {
+        if (state.tableRows.length === 0) return;
+        const maxCols = Math.max(...state.tableRows.map((r) => r.length));
+        state.tableRows = state.tableRows.map((r) => {
+          const copy = [...r];
+          while (copy.length < maxCols) copy.push('');
+          return copy;
+        });
+      }
+
+      // ==================== RENDER PREVIEW TABLE ====================
+      function renderTablePreview() {
+        const thead = $('previewThead');
+        const tbody = $('previewTbody');
+
+        if (state.tableRows.length === 0) {
+          thead.innerHTML = '';
+          tbody.innerHTML = `<tr><td class="p-10 text-center text-sm text-slate-400">No table data yet. Scan QR from mobile, upload A4 photos, or click <strong>Load Sample A4</strong>.</td></tr>`;
+          $('tableStatsBadge').textContent = '0 rows × 0 cols';
+          return;
+        }
+
+        normalizeTableWidths();
+        const cols = state.tableRows[0].length;
+        $('tableStatsBadge').textContent = `${state.tableRows.length} rows × ${cols} cols`;
+
+        // Column letters A, B, C...
+        let headHtml = '<tr><th class="px-3 py-2 text-[11px] font-semibold text-slate-400 w-10 text-center">#</th>';
+        for (let c = 0; c < cols; c++) {
+          const letter = XLSX.utils.encode_col(c);
+          headHtml += `<th class="px-2 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-l border-slate-200">${letter}</th>`;
+        }
+        headHtml += '<th class="w-8"></th></tr>';
+        thead.innerHTML = headHtml;
+
+        tbody.innerHTML = state.tableRows.map((row, rIdx) => {
+          const cells = row.map((val, cIdx) => `
+            <td class="border-l border-slate-100 p-0.5">
+              <input type="text" data-r="${rIdx}" data-c="${cIdx}" value="${String(val).replace(/"/g, '&quot;')}" class="cell-input ${rIdx === 0 ? 'font-semibold text-slate-900 bg-slate-50/50' : 'text-slate-700'}" />
+            </td>
+          `).join('');
+          return `
+            <tr class="hover:bg-slate-50/70">
+              <td class="px-2 py-1 text-[11px] font-mono text-slate-400 text-center bg-slate-50/40">${rIdx + 1}</td>
+              ${cells}
+              <td class="px-1 text-center">
+                <button data-del-row="${rIdx}" title="Delete row" class="text-slate-300 hover:text-rose-600 text-sm font-bold px-1">&times;</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // ==================== EXPORT EXCEL (.XLSX) ====================
+      function downloadExcel() {
+        if (state.tableRows.length === 0) {
+          showToast('No extracted rows to export yet', 'warn');
+          return;
+        }
+
+        if (state.targetMode === 'append') {
+          if (!state.existingWorkbook || !state.existingSelectedSheet) {
+            showToast('Please select your Previous Excel file first', 'warn');
+            return;
+          }
+          // Combine existing rows + newly extracted rows right below
+          const combined = [...state.existingRows, ...state.tableRows];
+          const newWs = XLSX.utils.aoa_to_sheet(combined);
+          state.existingWorkbook.Sheets[state.existingSelectedSheet] = newWs;
+
+          const baseName = state.existingFileName.replace(/\.(xlsx|xls|csv)$/i, '');
+          const outName = `${baseName}_updated.xlsx`;
+          XLSX.writeFile(state.existingWorkbook, outName);
+          showToast(`Appended ${state.tableRows.length} rows below Row ${state.existingRows.length} in ${outName}`, 'success');
+        } else {
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet(state.tableRows);
+          // Auto-fit column widths
+          const colWidths = state.tableRows[0].map((_, cIdx) => {
+            const maxLen = Math.max(...state.tableRows.map((r) => String(r[cIdx] || '').length), 8);
+            return { wch: Math.min(maxLen + 3, 40) };
+          });
+          ws['!cols'] = colWidths;
+          XLSX.utils.book_append_sheet(wb, ws, 'Extracted_Data');
+          const rawName = ($('inputNewFilename').value || 'A4_Converted_Data').trim().replace(/[^a-zA-Z0-9_\- ]/g, '_');
+          XLSX.writeFile(wb, `${rawName}.xlsx`);
+          showToast(`Downloaded ${rawName}.xlsx`, 'success');
+        }
+      }
+
+      // ==================== LIVE CAMERA & QR SCANNER (MOBILE) ====================
+      async function toggleLiveCamera() {
+        if (state.liveStream) {
+          stopLiveCamera();
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false
+          });
+          state.liveStream = stream;
+          $('liveCamVideo').srcObject = stream;
+          await $('liveCamVideo').play();
+          $('liveCamBox').classList.remove('hidden');
+        } catch (err) {
+          showToast('Camera permission denied or unavailable. Use "Pick / Camera" button.', 'warn');
+        }
+      }
+
+      function stopLiveCamera() {
+        if (state.liveStream) {
+          state.liveStream.getTracks().forEach((t) => t.stop());
+          state.liveStream = null;
+        }
+        $('liveCamBox').classList.add('hidden');
+      }
+
+      function snapLivePhoto() {
+        const video = $('liveCamVideo');
+        const canvas = $('liveCamCanvas');
+        if (!video.videoWidth) return;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        state.mobileQueue.push({
+          id: 'cam-' + Date.now(),
+          name: `Page_${state.mobileQueue.length + 1}.jpg`,
+          dataUrl
+        });
+        renderMobileQueue();
+        showToast(`Captured Page #${state.mobileQueue.length}`, 'success');
+      }
+
+      async function startQrScanner() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('Camera needs HTTPS (GitHub Pages). Enter Pairing ID manually or open via HTTPS.', 'warn');
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+          state.qrStream = stream;
+          const video = $('qrVideo');
+          const canvas = $('qrScanCanvas');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          video.srcObject = stream;
+          await video.play();
+          $('qrScannerBox').classList.remove('hidden');
+
+          const scanLoop = () => {
+            if (!state.qrStream) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR !== 'undefined') {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+              if (code && code.data) {
+                const raw = code.data;
+                let extractedId = raw;
+                if (raw.includes('connect=')) {
+                  try { extractedId = new URL(raw).searchParams.get('connect') || raw; } catch (e) {}
+                }
+                stopQrScanner();
+                connectToRemotePeer(extractedId, 'mobile');
+                return;
+              }
+            }
+            state.qrScanRaf = requestAnimationFrame(scanLoop);
+          };
+          scanLoop();
+        } catch (err) {
+          showToast('Camera blocked: Open site over HTTPS (GitHub Pages) or enter Pairing ID.', 'error');
+        }
+      }
+
+      function stopQrScanner() {
+        if (state.qrScanRaf) cancelAnimationFrame(state.qrScanRaf);
+        if (state.qrStream) {
+          state.qrStream.getTracks().forEach((t) => t.stop());
+          state.qrStream = null;
+        }
+        $('qrScannerBox').classList.add('hidden');
+      }
+
+      // ==================== SAMPLE DATA ====================
+      function loadSampleA4Data() {
+        state.tableRows = [
+          ['Sr No', 'Customer Name', 'City', 'Invoice No', 'Amount (INR)', 'Status'],
+          ['101', 'Aarav Sharma', 'New Delhi', 'INV-2026-01', '4,500', 'Paid'],
+          ['102', 'Priya Verma', 'Mumbai', 'INV-2026-02', '7,200', 'Pending'],
+          ['103', 'Rohan Mehta', 'Jaipur', 'INV-2026-03', '3,150', 'Paid'],
+          ['104', 'Sneha Kapoor', 'Bengaluru', 'INV-2026-04', '9,800', 'Paid']
+        ];
+        renderTablePreview();
+        showToast('Sample A4 table loaded! Edit cells or test Excel export.', 'info');
+      }
+
+      // ==================== EVENT LISTENERS ====================
+      function applyTheme(isDark) {
+        document.body.classList.toggle('dark-mode', isDark);
+        $('themeIcon').textContent = isDark ? '☀️' : '🌙';
+        if ($('authThemeIcon')) $('authThemeIcon').textContent = isDark ? '☀️' : '🌙';
+        $('themeLabel').textContent = isDark ? 'Light' : 'Dark';
+        try {
+          localStorage.setItem('snap2sheet_theme', isDark ? 'dark' : 'light');
+          if (state.currentUser) localStorage.setItem(getUserStorageKey('theme'), isDark ? 'dark' : 'light');
+        } catch (e) {}
+      }
+      $('btnThemeToggle').addEventListener('click', () => {
+        applyTheme(!document.body.classList.contains('dark-mode'));
+      });
+      try {
+        if (localStorage.getItem('snap2sheet_theme') === 'dark') applyTheme(true);
+      } catch (e) {}
+
+      $('btnModeLaptop').addEventListener('click', () => switchMode('laptop'));
+      $('btnModeMobile').addEventListener('click', () => switchMode('mobile'));
+
+      $('btnOpenSettings').addEventListener('click', () => $('settingsModal').classList.remove('hidden'));
+      $('btnCloseSettings').addEventListener('click', () => $('settingsModal').classList.add('hidden'));
+      $('selectEngine').addEventListener('change', (e) => {
+        $('geminiKeyBox').classList.toggle('hidden', e.target.value !== 'gemini');
+      });
+      $('btnSaveSettings').addEventListener('click', saveSettings);
+
+      $('btnRefreshPeer').addEventListener('click', initLocalPeer);
+      $('btnOpenLaptopOtpModal').addEventListener('click', () => openOtpModal('laptop-to-mobile'));
+      $('btnOpenMobileOtpModal').addEventListener('click', () => openOtpModal('mobile-to-laptop'));
+      $('btnCloseOtpModal').addEventListener('click', () => $('otpModal').classList.add('hidden'));
+      $('btnCancelOtpModal').addEventListener('click', () => $('otpModal').classList.add('hidden'));
+      $('btnSubmitOtpModal').addEventListener('click', () => {
+        const code = $('inputOtpCode').value.trim();
+        if (!code) {
+          showToast('Please enter the 6-digit OTP', 'warn');
+          return;
+        }
+        $('otpModal').classList.add('hidden');
+        const fromMode = state.otpModalTarget === 'laptop-to-mobile' ? 'laptop' : 'mobile';
+        connectToRemotePeer(code, fromMode);
+      });
+      $('inputOtpCode').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') $('btnSubmitOtpModal').click();
+      });
+      $('btnCopyLink').addEventListener('click', () => {
+        const url = getMobileConnectUrl(state.peerId || 'DEMO');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => showToast('Mobile link copied!', 'success')).catch(() => fallbackCopy(url));
+        } else {
+          fallbackCopy(url);
+        }
+      });
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); showToast('Mobile link copied!', 'success'); } catch (e) {}
+        ta.remove();
+      }
+
+      $('btnTargetNew').addEventListener('click', () => setTargetMode('new'));
+      $('btnTargetAppend').addEventListener('click', () => setTargetMode('append'));
+
+      $('inputExistingExcel').addEventListener('change', (e) => {
+        if (e.target.files[0]) loadExistingExcelFile(e.target.files[0]);
+      });
+      $('selectExistingSheet').addEventListener('change', (e) => selectExistingSheet(e.target.value));
+
+      $('inputLaptopImages').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        for (const f of files) {
+          const dataUrl = await compressImageFile(f);
+          state.laptopQueue.push({ id: 'lap-' + Date.now() + Math.random(), name: f.name, dataUrl });
+        }
+        e.target.value = '';
+        renderLaptopQueue();
+        if (files.length) showToast(`Added ${files.length} page(s) to queue`, 'info');
+      });
+
+      $('inputMobileGallery').addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []);
+        for (const f of files) {
+          const dataUrl = await compressImageFile(f);
+          state.mobileQueue.push({ id: 'mob-' + Date.now() + Math.random(), name: f.name, dataUrl });
+        }
+        e.target.value = '';
+        renderMobileQueue();
+        if (files.length) showToast(`Added ${files.length} photo(s) in sequence`, 'success');
+      });
+
+      // Remove item from queue via event delegation
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-remove-idx]');
+        if (btn) {
+          const idx = Number(btn.getAttribute('data-remove-idx'));
+          const qName = btn.getAttribute('data-queue');
+          if (qName === 'mobile') {
+            state.mobileQueue.splice(idx, 1);
+            renderMobileQueue();
+          } else {
+            state.laptopQueue.splice(idx, 1);
+            renderLaptopQueue();
+          }
+          return;
+        }
+        const delRowBtn = e.target.closest('[data-del-row]');
+        if (delRowBtn) {
+          const rIdx = Number(delRowBtn.getAttribute('data-del-row'));
+          state.tableRows.splice(rIdx, 1);
+          renderTablePreview();
+        }
+      });
+
+      // Live cell editing
+      $('previewTbody').addEventListener('input', (e) => {
+        if (e.target.classList.contains('cell-input')) {
+          const r = Number(e.target.getAttribute('data-r'));
+          const c = Number(e.target.getAttribute('data-c'));
+          if (state.tableRows[r]) state.tableRows[r][c] = e.target.value;
+        }
+      });
+
+      // Live column split / mode re-clustering for Tesseract results
+      $('colSensitivity').addEventListener('input', rebuildFromCachedPages);
+      $('splitModeSelect').addEventListener('change', rebuildFromCachedPages);
+
+      $('btnClearQueue').addEventListener('click', () => {
+        state.laptopQueue = [];
+        renderLaptopQueue();
+      });
+
+      $('btnConvertQueue').addEventListener('click', () => processImageQueue(state.laptopQueue));
+      $('btnTrySample').addEventListener('click', loadSampleA4Data);
+      $('btnAddRow').addEventListener('click', () => {
+        const cols = state.tableRows[0]?.length || 3;
+        state.tableRows.push(new Array(cols).fill(''));
+        renderTablePreview();
+      });
+      $('btnAddCol').addEventListener('click', () => {
+        if (state.tableRows.length === 0) state.tableRows.push(['']);
+        else state.tableRows.forEach((r) => r.push(''));
+        renderTablePreview();
+      });
+      $('btnClearTable').addEventListener('click', () => {
+        state.tableRows = [];
+        state.lastTesseractWords = null;
+        renderTablePreview();
+      });
+      $('btnDownloadExcel').addEventListener('click', downloadExcel);
+
+      // Mobile controls & 3-method switcher
+      function setMobileConnMethod(method) {
+        const tabs = {
+          show: [$('btnMobMethodOtpShow'), $('mobPanelOtpShow')],
+          enter: [$('btnMobMethodOtpEnter'), $('mobPanelOtpEnter')],
+          qr: [$('btnMobMethodQr'), $('mobPanelQr')]
+        };
+        Object.entries(tabs).forEach(([k, [btn, panel]]) => {
+          const active = k === method;
+          panel.classList.toggle('hidden', !active);
+          btn.className = active
+            ? 'py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-slate-900 shadow-xs transition'
+            : 'py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition';
+        });
+        if (method !== 'qr') stopQrScanner();
+      }
+      $('btnMobMethodOtpShow').addEventListener('click', () => setMobileConnMethod('show'));
+      $('btnMobMethodOtpEnter').addEventListener('click', () => {
+        setMobileConnMethod('enter');
+        openOtpModal('mobile-to-laptop');
+      });
+      $('btnMobMethodQr').addEventListener('click', () => setMobileConnMethod('qr'));
+      $('btnScanQrMobile').addEventListener('click', startQrScanner);
+      $('btnCloseQrScanner').addEventListener('click', stopQrScanner);
+      $('btnToggleLiveCam').addEventListener('click', toggleLiveCamera);
+      $('btnSnapPhoto').addEventListener('click', snapLivePhoto);
+      $('btnStopLiveCam').addEventListener('click', stopLiveCamera);
+
+      $('btnSendToLaptop').addEventListener('click', () => {
+        if (state.mobileQueue.length === 0) {
+          showToast('Click at least 1 photo first!', 'warn');
+          return;
+        }
+        if (!state.mobileConn || !state.mobileConn.open) {
+          showToast('Not linked to laptop. Connect ID or tap "Convert Directly on This Phone".', 'warn');
+          return;
+        }
+        state.mobileQueue.forEach((item) => {
+          state.mobileConn.send({
+            type: 'image-batch-item',
+            id: item.id,
+            name: item.name,
+            dataUrl: item.dataUrl
+          });
+        });
+        state.mobileConn.send({ type: 'batch-complete', count: state.mobileQueue.length });
+        showToast(`Sent ${state.mobileQueue.length} page(s) to laptop!`, 'success');
+        state.mobileQueue = [];
+        renderMobileQueue();
+      });
+
+      $('btnConvertOnMobile').addEventListener('click', async () => {
+        if (state.mobileQueue.length === 0) {
+          showToast('Click at least 1 photo first!', 'warn');
+          return;
+        }
+        state.laptopQueue = [...state.mobileQueue];
+        renderLaptopQueue();
+        switchMode('laptop');
+        await processImageQueue(state.laptopQueue);
+      });
+
+      // ==================== AUTHENTICATION & GOOGLE SIGN-IN ====================
+      const DEFAULT_GOOGLE_CLIENT_ID = ''; // Optional: paste your Google OAuth Client ID here before hosting
+
+      function getUserStorageKey(suffix) {
+        const uid = state.currentUser?.id || 'guest';
+        return `snap2sheet_${uid}_${suffix}`;
+      }
+
+      function getSavedAccounts() {
+        try {
+          return JSON.parse(localStorage.getItem('snap2sheet_accounts') || '[]');
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveAccount(account) {
+        try {
+          const accounts = getSavedAccounts();
+          const idx = accounts.findIndex((a) => a.id === account.id);
+          if (idx >= 0) accounts[idx] = { ...accounts[idx], ...account };
+          else accounts.push(account);
+          localStorage.setItem('snap2sheet_accounts', JSON.stringify(accounts));
+        } catch (e) {}
+      }
+
+      function getGoogleClientId() {
+        try {
+          return localStorage.getItem('snap2sheet_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
+        } catch (e) {
+          return DEFAULT_GOOGLE_CLIENT_ID;
+        }
+      }
+
+      function parseJwtPayload(token) {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+          return JSON.parse(jsonPayload);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function initGoogleSignIn() {
+        const clientId = getGoogleClientId().trim();
+        if ($('inputGoogleClientId')) $('inputGoogleClientId').value = clientId;
+        const container = $('googleBtnContainer');
+        const fallbackBtn = $('btnContinueGoogleFallback');
+        if (!clientId || typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+          container.classList.add('hidden');
+          fallbackBtn.classList.remove('hidden');
+          return;
+        }
+        try {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => {
+              const payload = parseJwtPayload(response.credential);
+              if (payload && payload.email) {
+                const email = payload.email.toLowerCase();
+                const userObj = { id: email, label: payload.name ? `${payload.name} (${email})` : email, gmail: email, verifiedGoogle: true };
+                saveAccount(userObj);
+                completeLogin(userObj);
+              } else {
+                showToast('Could not verify Google account.', 'error');
+              }
+            }
+          });
+          container.innerHTML = '';
+          container.classList.remove('hidden');
+          fallbackBtn.classList.add('hidden');
+          google.accounts.id.renderButton(container, {
+            theme: document.body.classList.contains('dark-mode') ? 'filled_black' : 'outline',
+            size: 'large',
+            text: 'continue_with',
+            width: 340
+          });
+        } catch (e) {
+          container.classList.add('hidden');
+          fallbackBtn.classList.remove('hidden');
+        }
+      }
+
+      function completeLogin(userObj) {
+        state.currentUser = userObj;
+        try {
+          localStorage.setItem('snap2sheet_active_user', JSON.stringify(userObj));
+        } catch (e) {}
+        $('headerUserBadge').textContent = userObj.gmail || userObj.label;
+        $('authGate').classList.add('hidden');
+        $('appShell').classList.remove('hidden');
+
+        loadSettings();
+        try {
+          const userTheme = localStorage.getItem(getUserStorageKey('theme'));
+          if (userTheme === 'dark') applyTheme(true);
+          else if (userTheme === 'light') applyTheme(false);
+        } catch (e) {}
+
+        initLocalPeer();
+        if (state.pendingConnectParam) {
+          switchMode('mobile');
+          connectToRemotePeer(state.pendingConnectParam, 'mobile');
+          state.pendingConnectParam = '';
+        }
+        showToast(`Signed in as ${userObj.gmail || userObj.label}`, 'success');
+      }
+
+      function logoutUser() {
+        state.currentUser = null;
+        try { localStorage.removeItem('snap2sheet_active_user'); } catch (e) {}
+        if (state.peer) { try { state.peer.destroy(); } catch (e) {} }
+        if (state.mobilePeer) { try { state.mobilePeer.destroy(); } catch (e) {} }
+        $('appShell').classList.add('hidden');
+        $('authGate').classList.remove('hidden');
+        initGoogleSignIn();
+        showToast('Logged out', 'info');
+      }
+
+      function switchAuthTab(tab) {
+        const isLogin = tab === 'login';
+        $('panelLogin').classList.toggle('hidden', !isLogin);
+        $('panelSignup').classList.toggle('hidden', isLogin);
+        $('btnTabLogin').className = isLogin
+          ? 'py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition'
+          : 'py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+        $('btnTabSignup').className = !isLogin
+          ? 'py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition'
+          : 'py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+      }
+
+      $('btnTabLogin').addEventListener('click', () => switchAuthTab('login'));
+      $('btnTabSignup').addEventListener('click', () => switchAuthTab('signup'));
+      $('btnAuthThemeToggle').addEventListener('click', () => {
+        applyTheme(!document.body.classList.contains('dark-mode'));
+        initGoogleSignIn();
+      });
+      $('btnLogout').addEventListener('click', logoutUser);
+
+      $('btnToggleGoogleSetup').addEventListener('click', () => {
+        $('googleSetupBox').classList.toggle('hidden');
+      });
+
+      $('btnSaveGoogleClientId').addEventListener('click', () => {
+        const cid = $('inputGoogleClientId').value.trim();
+        try { localStorage.setItem('snap2sheet_google_client_id', cid); } catch (e) {}
+        $('googleSetupBox').classList.add('hidden');
+        initGoogleSignIn();
+        showToast(cid ? 'Google Client ID saved!' : 'Google Client ID cleared', 'success');
+      });
+
+      $('btnContinueGoogleFallback').addEventListener('click', () => {
+        const cid = getGoogleClientId().trim();
+        if (!cid) {
+          $('googleSetupBox').classList.remove('hidden');
+          showToast('Add your Google OAuth Client ID to enable real Google account sign-in.', 'info');
+          return;
+        }
+        initGoogleSignIn();
+      });
+
+      $('btnLoginWithPassword').addEventListener('click', () => {
+        const rawUser = $('inputLoginUser').value.trim().toLowerCase();
+        const pass = $('inputLoginPassword').value;
+        if (!rawUser || !rawUser.endsWith('@gmail.com') || !pass) {
+          showToast('Enter a valid @gmail.com ID and password', 'warn');
+          return;
+        }
+        const accounts = getSavedAccounts();
+        const found = accounts.find((a) => (a.id === rawUser || a.gmail === rawUser) && a.password === pass);
+        if (!found) {
+          showToast('Account not found or wrong password. Please Sign Up first.', 'error');
+          return;
+        }
+        completeLogin(found);
+      });
+
+      $('btnSignupSubmit').addEventListener('click', () => {
+        const gmail = $('inputSignupGmail').value.trim().toLowerCase();
+        const password = $('inputSignupPassword').value;
+        if (!gmail || !gmail.endsWith('@gmail.com')) {
+          showToast('Please enter a valid @gmail.com address', 'warn');
+          return;
+        }
+        if (!password || password.length < 4) {
+          showToast('Please set a password (minimum 4 characters)', 'warn');
+          return;
+        }
+        const userObj = { id: gmail, label: gmail, gmail, password };
+        saveAccount(userObj);
+        completeLogin(userObj);
+      });
+
+      // ==================== INIT ====================
+      loadSettings();
+      if (!window.location.href.startsWith('http://') && !window.location.href.startsWith('https://')) {
+        $('localHostHint').classList.remove('hidden');
+      }
+      $('inputCustomHostUrl').addEventListener('input', () => {
+        if (state.peerId) renderQRCode(getMobileConnectUrl(state.peerId));
+      });
+      const params = new URLSearchParams(window.location.search);
+      const connectParam = params.get('connect');
+      if (connectParam) state.pendingConnectParam = connectParam;
+
+      let activeUser = null;
+      try {
+        activeUser = JSON.parse(localStorage.getItem('snap2sheet_active_user') || 'null');
+      } catch (e) {}
+      if (activeUser && activeUser.id) {
+        completeLogin(activeUser);
+      } else {
+        window.addEventListener('load', initGoogleSignIn);
+        setTimeout(initGoogleSignIn, 500);
+      }
+    })();
+  </script>
+</body>
+</html>
