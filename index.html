@@ -13,7 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Auth0 SPA SDK -->
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.18/auth0-spa-js.production.js"></script>
   <style>
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -123,7 +124,7 @@
   <!-- Toast Container -->
   <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
-  <!-- ==================== AUTHENTICATION GATE (LOGIN / SIGN UP) ==================== -->
+  <!-- ==================== AUTHENTICATION GATE (AUTH0 UNIVERSAL LOGIN) ==================== -->
   <section id="authGate" class="min-h-screen flex items-center justify-center p-4 bg-slate-50">
     <div class="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-7 space-y-5">
       <div class="flex items-center justify-between">
@@ -135,84 +136,28 @@
           </div>
           <div>
             <h1 class="text-lg font-bold text-slate-900 leading-tight">Snap2Sheet</h1>
-            <p class="text-[11px] text-slate-500">Sign in with your Gmail to continue</p>
+            <p class="text-[11px] text-slate-500">Sign in with Auth0 to continue</p>
           </div>
         </div>
-        <button id="btnAuthThemeToggle" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
+        <button id="btnAuthThemeToggle" type="button" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
           <span id="authThemeIcon">🌙</span>
         </button>
       </div>
 
-      <!-- Real Google Sign-In Section -->
-      <div class="space-y-2.5">
-        <div id="googleBtnContainer" class="flex justify-center min-h-[42px]"></div>
-        <button id="btnContinueGoogleFallback" class="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 shadow-xs transition">
-          <svg class="w-4 h-4" viewBox="0 0 24 24">
-            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.6 2.8C6.1 7.2 8.8 5 12 5z"/>
-            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.6l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/>
-            <path fill="#FBBC05" d="M5.2 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.6 7.4C.6 9.4 0 11.6 0 14s.6 4.6 1.6 6.6l3.6-2.8z"/>
-            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.2 0-5.9-2.2-6.8-5.1l-3.6 2.8C3.5 20.4 7.4 23 12 23z"/>
-          </svg>
-          <span>Continue with Google</span>
+      <div id="authStatusMessage" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700"></div>
+
+      <div class="space-y-2.5 pt-1">
+        <button id="btnAuth0Login" type="button" class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <span>Login with Auth0</span>
         </button>
-
-        <div class="text-center">
-          <button id="btnToggleGoogleSetup" class="text-[11px] text-emerald-700 hover:underline font-medium">
-            Configure Google OAuth Client ID (for GitHub Pages)
-          </button>
-        </div>
-
-        <div id="googleSetupBox" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-[11px] text-slate-600">
-          <p>Paste your <strong>Google OAuth Web Client ID</strong> so only Gmail accounts signed into this phone/laptop can log in:</p>
-          <div class="flex gap-1.5">
-            <input id="inputGoogleClientId" type="text" placeholder="123456789-abc.apps.googleusercontent.com" class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono" />
-            <button id="btnSaveGoogleClientId" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold">Save</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Divider -->
-      <div class="relative flex items-center py-1">
-        <div class="flex-grow border-t border-slate-200"></div>
-        <span class="shrink mx-3 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">or use Gmail &amp; Password</span>
-        <div class="flex-grow border-t border-slate-200"></div>
-      </div>
-
-      <!-- Login / Sign Up Mode Switch -->
-      <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-        <button id="btnTabLogin" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition">Login</button>
-        <button id="btnTabSignup" class="py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">Sign Up</button>
-      </div>
-
-      <!-- LOGIN PANEL (Gmail + Password) -->
-      <div id="panelLogin" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Gmail ID</label>
-          <input id="inputLoginUser" type="email" placeholder="yourname@gmail.com" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-          <input id="inputLoginPassword" type="password" placeholder="Enter your password" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
-        </div>
-        <button id="btnLoginWithPassword" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
-          Login to Snap2Sheet
+        <button id="btnAuth0Signup" type="button" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <span>Sign Up with Auth0</span>
         </button>
       </div>
 
-      <!-- SIGN UP PANEL (Gmail + Password) -->
-      <div id="panelSignup" class="hidden space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Gmail ID <span class="text-rose-500">*</span></label>
-          <input id="inputSignupGmail" type="email" placeholder="yourname@gmail.com" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Set Password <span class="text-rose-500">*</span></label>
-          <input id="inputSignupPassword" type="password" placeholder="Create a password (min 4 chars)" class="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
-        </div>
-        <button id="btnSignupSubmit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
-          Sign Up &amp; Continue
-        </button>
-      </div>
+      <p class="text-[11px] text-center text-slate-400">
+        Powered by Auth0 Universal Login &bull; <code>snap2sheet.us.auth0.com</code>
+      </p>
     </div>
   </section>
 
@@ -235,11 +180,11 @@
 
       <!-- Mode Switcher -->
       <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-        <button id="btnModeLaptop" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-active flex items-center gap-1.5">
+        <button id="btnModeLaptop" type="button" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-active flex items-center gap-1.5">
           <svg class="w-4 h-4 hidden sm:inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           <span>Laptop Studio</span>
         </button>
-        <button id="btnModeMobile" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-inactive flex items-center gap-1.5">
+        <button id="btnModeMobile" type="button" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition tab-inactive flex items-center gap-1.5">
           <svg class="w-4 h-4 hidden sm:inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
           <span>Mobile Camera</span>
         </button>
@@ -248,14 +193,14 @@
       <!-- Theme Toggle & Settings -->
       <div class="flex items-center gap-2 shrink-0">
         <span id="headerUserBadge" class="hidden md:inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700 max-w-[160px] truncate"></span>
-        <button id="btnThemeToggle" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+        <button id="btnThemeToggle" type="button" title="Switch Dark / Light Mode" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
           <span id="themeIcon">🌙</span>
           <span id="themeLabel" class="hidden sm:inline">Dark</span>
         </button>
-        <button id="btnLogout" title="Logout" class="px-2.5 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition">
+        <button id="btnLogout" type="button" title="Logout" class="px-2.5 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition">
           Logout
         </button>
-        <button id="btnOpenSettings" title="OCR & AI Settings" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
+        <button id="btnOpenSettings" type="button" title="OCR & AI Settings" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </button>
       </div>
@@ -297,13 +242,13 @@
           </div>
 
           <div class="mt-4 flex flex-wrap gap-2">
-            <button id="btnOpenLaptopOtpModal" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+            <button id="btnOpenLaptopOtpModal" type="button" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
               Enter Mobile OTP
             </button>
-            <button id="btnCopyLink" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+            <button id="btnCopyLink" type="button" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
               Copy Link
             </button>
-            <button id="btnRefreshPeer" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+            <button id="btnRefreshPeer" type="button" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
               New OTP
             </button>
           </div>
@@ -325,11 +270,11 @@
             <p class="text-xs text-slate-500 mb-4">Choose whether to create a fresh Excel file or add rows below an existing file.</p>
 
             <div class="grid grid-cols-2 gap-2.5 mb-4">
-              <button id="btnTargetNew" class="p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 text-left transition">
+              <button id="btnTargetNew" type="button" class="p-3 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 text-left transition">
                 <div class="text-xs font-bold text-emerald-900">New Excel File</div>
                 <div class="text-[11px] text-emerald-700 mt-0.5">Start fresh .xlsx</div>
               </button>
-              <button id="btnTargetAppend" class="p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition">
+              <button id="btnTargetAppend" type="button" class="p-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition">
                 <div class="text-xs font-bold text-slate-800">Previous Excel</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">Add below last row</div>
               </button>
@@ -368,7 +313,7 @@
               <span class="text-xs font-medium text-slate-700">OCR Engine:</span>
               <span id="ocrModeLabel" class="text-xs font-semibold text-emerald-700 ml-1">Built-in Offline</span>
             </div>
-            <button id="btnTrySample" class="text-xs font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2">
+            <button id="btnTrySample" type="button" class="text-xs font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2">
               Load Sample A4
             </button>
           </div>
@@ -400,10 +345,10 @@
           </div>
 
           <div class="mt-4 flex gap-2">
-            <button id="btnConvertQueue" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="btnConvertQueue" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
               Convert to Table
             </button>
-            <button id="btnClearQueue" class="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition">
+            <button id="btnClearQueue" type="button" class="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition">
               Clear
             </button>
           </div>
@@ -445,10 +390,10 @@
               <label for="colSensitivity" class="text-[11px] font-medium text-slate-600">Gap:</label>
               <input id="colSensitivity" type="range" min="10" max="80" value="28" class="w-14 accent-emerald-600" />
             </div>
-            <button id="btnAddRow" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Row</button>
-            <button id="btnAddCol" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Col</button>
-            <button id="btnClearTable" class="px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-xs font-medium text-rose-700">Reset</button>
-            <button id="btnDownloadExcel" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-1.5 transition">
+            <button id="btnAddRow" type="button" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Row</button>
+            <button id="btnAddCol" type="button" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700">+ Col</button>
+            <button id="btnClearTable" type="button" class="px-3 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-xs font-medium text-rose-700">Reset</button>
+            <button id="btnDownloadExcel" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-sm flex items-center gap-1.5 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span id="btnDownloadLabel">Download Excel (.xlsx)</span>
             </button>
@@ -486,9 +431,9 @@
 
         <p class="text-[11px] text-slate-500 mb-2.5">Choose how you want to link with your Laptop:</p>
         <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 mb-3">
-          <button id="btnMobMethodOtpShow" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-slate-900 shadow-xs transition">My OTP</button>
-          <button id="btnMobMethodOtpEnter" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Enter Laptop OTP</button>
-          <button id="btnMobMethodQr" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Scan QR</button>
+          <button id="btnMobMethodOtpShow" type="button" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-slate-900 shadow-xs transition">My OTP</button>
+          <button id="btnMobMethodOtpEnter" type="button" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Enter Laptop OTP</button>
+          <button id="btnMobMethodQr" type="button" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition">Scan QR</button>
         </div>
 
         <!-- Panel 1: Show Mobile's own unique OTP -->
@@ -502,14 +447,14 @@
 
         <!-- Panel 2: Open Laptop OTP Pop-up -->
         <div id="mobPanelOtpEnter" class="hidden">
-          <button id="btnOpenMobileOtpModal" class="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
+          <button id="btnOpenMobileOtpModal" type="button" class="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition">
             Open OTP Pop-up &amp; Enter Laptop OTP
           </button>
         </div>
 
         <!-- Panel 3: Scan Laptop QR -->
         <div id="mobPanelQr" class="hidden">
-          <button id="btnScanQrMobile" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
+          <button id="btnScanQrMobile" type="button" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">
             Open Camera to Scan Laptop QR
           </button>
         </div>
@@ -518,7 +463,7 @@
         <div id="qrScannerBox" class="hidden mt-3 rounded-xl overflow-hidden bg-black relative">
           <video id="qrVideo" class="w-full h-56 object-cover" playsinline muted></video>
           <canvas id="qrScanCanvas" class="hidden"></canvas>
-          <button id="btnCloseQrScanner" class="absolute top-2 right-2 bg-white/90 text-slate-900 text-xs font-semibold px-2.5 py-1 rounded-lg">Close</button>
+          <button id="btnCloseQrScanner" type="button" class="absolute top-2 right-2 bg-white/90 text-slate-900 text-xs font-semibold px-2.5 py-1 rounded-lg">Close</button>
           <div class="absolute bottom-2 inset-x-2 text-center text-[11px] text-white bg-black/60 py-1 rounded-lg">Point camera at Laptop QR code</div>
         </div>
       </div>
@@ -535,7 +480,7 @@
 
         <!-- Live Camera / File Picker Buttons -->
         <div class="grid grid-cols-2 gap-2.5">
-          <button id="btnToggleLiveCam" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition">
+          <button id="btnToggleLiveCam" type="button" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             <span>Live Camera</span>
           </button>
@@ -552,10 +497,10 @@
           <video id="liveCamVideo" class="w-full h-72 object-cover" playsinline muted></video>
           <canvas id="liveCamCanvas" class="hidden"></canvas>
           <div class="absolute bottom-3 inset-x-0 flex items-center justify-center gap-4">
-            <button id="btnSnapPhoto" class="w-14 h-14 rounded-full bg-white border-4 border-emerald-500 shadow-lg active:scale-95 transition flex items-center justify-center">
+            <button id="btnSnapPhoto" type="button" class="w-14 h-14 rounded-full bg-white border-4 border-emerald-500 shadow-lg active:scale-95 transition flex items-center justify-center">
               <span class="w-10 h-10 rounded-full bg-emerald-600"></span>
             </button>
-            <button id="btnStopLiveCam" class="px-3 py-1.5 rounded-lg bg-black/70 text-white text-xs font-medium">Done</button>
+            <button id="btnStopLiveCam" type="button" class="px-3 py-1.5 rounded-lg bg-black/70 text-white text-xs font-medium">Done</button>
           </div>
         </div>
 
@@ -568,10 +513,10 @@
 
         <!-- Action Buttons -->
         <div class="space-y-2 pt-2">
-          <button id="btnSendToLaptop" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50">
+          <button id="btnSendToLaptop" type="button" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold shadow-sm transition disabled:opacity-50">
             Send All Pages to Laptop (Wireless)
           </button>
-          <button id="btnConvertOnMobile" class="w-full py-2.5 rounded-xl border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold transition">
+          <button id="btnConvertOnMobile" type="button" class="w-full py-2.5 rounded-xl border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold transition">
             Or Convert Directly on This Phone
           </button>
         </div>
@@ -587,15 +532,15 @@
     <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between">
         <h3 id="otpModalTitle" class="text-base font-bold text-slate-900">Enter 6-Digit OTP</h3>
-        <button id="btnCloseOtpModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+        <button id="btnCloseOtpModal" type="button" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
       </div>
       <p id="otpModalDesc" class="text-xs text-slate-500">Enter the 6-digit OTP shown on the other device to link wirelessly.</p>
       <div>
         <input id="inputOtpCode" type="text" inputmode="numeric" maxlength="12" placeholder="e.g. 482910" class="w-full px-4 py-3 text-center text-xl font-bold font-mono tracking-widest border-2 border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500" />
       </div>
       <div class="flex justify-end gap-2 pt-1">
-        <button id="btnCancelOtpModal" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold">Cancel</button>
-        <button id="btnSubmitOtpModal" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Connect Now</button>
+        <button id="btnCancelOtpModal" type="button" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold">Cancel</button>
+        <button id="btnSubmitOtpModal" type="button" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Connect Now</button>
       </div>
     </div>
   </div>
@@ -605,7 +550,7 @@
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-bold text-slate-900">OCR &amp; Table Extraction Settings</h3>
-        <button id="btnCloseSettings" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+        <button id="btnCloseSettings" type="button" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
       </div>
 
       <div class="space-y-3 text-xs text-slate-600">
@@ -633,7 +578,7 @@
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
-        <button id="btnSaveSettings" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Save Settings</button>
+        <button id="btnSaveSettings" type="button" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Save Settings</button>
       </div>
     </div>
   </div>
@@ -641,6 +586,10 @@
   <script>
     (function () {
       'use strict';
+
+      // ==================== AUTH0 CONFIG ====================
+      const AUTH0_DOMAIN = 'snap2sheet.us.auth0.com';
+      const AUTH0_CLIENT_ID = 'G3hzOkUptqFQytlQnP40F6TWq1GL1s4z';
 
       // ==================== STATE ====================
       const state = {
@@ -653,7 +602,7 @@
         lastOcrPages: [], // { words, gridLines, width, height }
         splitMode: 'auto', // 'auto' | 'grid' | 'gap'
         otpModalTarget: 'mobile-to-laptop', // 'mobile-to-laptop' | 'laptop-to-mobile'
-        myOtp: '', 
+        myOtp: '',
         existingWorkbook: null,
         existingSheetNames: [],
         existingSelectedSheet: '',
@@ -670,9 +619,8 @@
         engine: 'tesseract',
         geminiKey: '',
         ocrLang: 'eng',
+        auth0Client: null,
         currentUser: null,
-        pendingOtp: '',
-        pendingOtpTarget: '',
         pendingConnectParam: ''
       };
 
@@ -698,6 +646,11 @@
       }
 
       // ==================== STORAGE HELPERS ====================
+      function getUserStorageKey(suffix) {
+        const uid = state.currentUser?.sub || state.currentUser?.email || 'guest';
+        return `snap2sheet_${encodeURIComponent(uid)}_${suffix}`;
+      }
+
       function loadSettings() {
         try {
           const saved = JSON.parse(localStorage.getItem(getUserStorageKey('settings')) || '{}');
@@ -979,7 +932,7 @@
           <div class="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-[3/4]">
             <img src="${item.dataUrl}" alt="Page ${idx + 1}" class="w-full h-full object-cover" />
             <span class="absolute top-1 left-1 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">#${idx + 1}</span>
-            <button data-remove-idx="${idx}" data-queue="${isMobile ? 'mobile' : 'laptop'}" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center opacity-90 hover:opacity-100">&times;</button>
+            <button type="button" data-remove-idx="${idx}" data-queue="${isMobile ? 'mobile' : 'laptop'}" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white text-xs flex items-center justify-center opacity-90 hover:opacity-100">&times;</button>
           </div>
         `).join('');
       }
@@ -1031,7 +984,6 @@
         state.existingSelectedSheet = sheetName;
         const ws = state.existingWorkbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        // Trim trailing completely empty rows
         while (rows.length > 0 && rows[rows.length - 1].every((c) => String(c).trim() === '')) {
           rows.pop();
         }
@@ -1042,7 +994,6 @@
       }
 
       // ==================== TABLE EXTRACTION ENGINE (GRID-LINE AWARE) ====================
-      // Detect horizontal and vertical table border lines using adaptive integral-image thresholding
       function detectTableGridLines(dataUrl) {
         return new Promise((resolve) => {
           const img = new Image();
@@ -1056,7 +1007,6 @@
             ctx.drawImage(img, 0, 0, W, H);
             const rgba = ctx.getImageData(0, 0, W, H).data;
 
-            // Grayscale + Integral Image for adaptive local thresholding
             const gray = new Uint8Array(W * H);
             const integral = new Int32Array((W + 1) * (H + 1));
             for (let y = 0; y < H; y++) {
@@ -1073,7 +1023,6 @@
               }
             }
 
-            // Binary dark mask (1 = dark line/ink, 0 = paper)
             const halfWin = 15;
             const dark = new Uint8Array(W * H);
             for (let y = 0; y < H; y++) {
@@ -1095,7 +1044,6 @@
               }
             }
 
-            // Helper: cluster adjacent 1D indices into line centers
             function clusterPositions(indices, maxGap = 6) {
               if (indices.length === 0) return [];
               const groups = [];
@@ -1112,7 +1060,6 @@
               return groups;
             }
 
-            // 1. Detect Horizontal Lines (longest contiguous dark run >= 25% of width)
             const minHRun = Math.max(120, Math.floor(W * 0.25));
             const hCandidates = [];
             for (let y = 0; y < H; y++) {
@@ -1137,7 +1084,6 @@
             }
             const hLines = clusterPositions(hCandidates, 6);
 
-            // 2. Detect Vertical Lines (longest contiguous dark run >= 18% of height)
             const minVRun = Math.max(100, Math.floor(H * 0.18));
             const vCandidates = [];
             for (let x = 0; x < W; x++) {
@@ -1168,7 +1114,6 @@
         });
       }
 
-      // Join words inside a single table cell in natural reading order (top-to-bottom, left-to-right)
       function joinCellWords(cellWords) {
         if (!cellWords || cellWords.length === 0) return '';
         const sorted = [...cellWords].sort((a, b) => a.yc - b.yc);
@@ -1196,7 +1141,6 @@
           .trim();
       }
 
-      // Build table strictly using detected vertical & horizontal grid lines
       function buildTableFromGrid(words, gridLines, imgWidth, imgHeight, colGapThreshold, splitMode = 'auto') {
         if (!words || words.length === 0) return [];
         const clean = words
@@ -1216,12 +1160,10 @@
         const hLines = (splitMode === 'vertical') ? [] : (gridLines?.hLines || []);
         const vLines = (splitMode === 'horizontal') ? [] : (gridLines?.vLines || []);
 
-        // If no vertical lines at all, fall back to gap clustering (or row-line + gap)
         if (vLines.length === 0 && hLines.length < 2) {
           return buildTableFromWords(words, colGapThreshold);
         }
 
-        // Build column intervals from vLines (and outer regions if words exist outside outer borders)
         let colBounds = [];
         if (vLines.length >= 1) {
           if (clean.some((w) => w.xc < vLines[0] - 8)) {
@@ -1237,7 +1179,6 @@
           }
         }
 
-        // Build row intervals from hLines (or Y-clustering if < 2 hLines)
         let rowBounds = [];
         if (hLines.length >= 2) {
           if (clean.some((w) => w.yc < hLines[0] - 8)) {
@@ -1253,7 +1194,6 @@
           }
         }
 
-        // Case A: Both horizontal & vertical lines available -> exact cell boxes!
         if (rowBounds.length > 0 && colBounds.length > 0) {
           const grid = [];
           for (const [y0, y1] of rowBounds) {
@@ -1269,7 +1209,6 @@
           return grid;
         }
 
-        // Case B: Vertical lines only (no horizontal lines) -> cluster rows by Y, map to vLine columns
         if (colBounds.length > 0) {
           clean.sort((a, b) => a.yc - b.yc);
           const rows = [];
@@ -1295,7 +1234,6 @@
           );
         }
 
-        // Case C: Horizontal lines only (split rows by hLines, split columns by global X-anchors/gap)
         if (rowBounds.length > 0 && colBounds.length === 0) {
           const rowChunksList = [];
           for (const [y0, y1] of rowBounds) {
@@ -1348,11 +1286,9 @@
           });
         }
 
-        // Fallback
         return buildTableFromWords(words, colGapThreshold);
       }
 
-      // Fallback: Clusters Tesseract word bounding boxes by space/gap into Rows & Columns
       function buildTableFromWords(words, colGapThreshold) {
         if (!words || words.length === 0) return [];
         const clean = words
@@ -1369,7 +1305,6 @@
 
         if (clean.length === 0) return [];
 
-        // 1. Group words into horizontal lines (rows)
         clean.sort((a, b) => a.yc - b.yc);
         const rows = [];
         let currentRow = [clean[0]];
@@ -1391,7 +1326,6 @@
         }
         rows.push(currentRow);
 
-        // 2. Within each row, merge words that are close together into cell-chunks
         const rowChunks = rows.map((row) => {
           row.sort((a, b) => a.x0 - b.x0);
           const chunks = [];
@@ -1410,7 +1344,6 @@
           return chunks;
         });
 
-        // 3. Discover global column X-anchors across all rows
         const allX0 = [];
         rowChunks.forEach((r) => r.forEach((c) => allX0.push(c.x0)));
         allX0.sort((a, b) => a - b);
@@ -1428,8 +1361,7 @@
         colAnchors.sort((a, b) => a.mean - b.mean);
         const numCols = Math.max(1, colAnchors.length);
 
-        // 4. Map each chunk to its nearest column anchor
-        const grid = rowChunks.map((chunks) => {
+        return rowChunks.map((chunks) => {
           const rowArr = new Array(numCols).fill('');
           chunks.forEach((chunk) => {
             let bestCol = 0;
@@ -1445,8 +1377,6 @@
           });
           return rowArr;
         });
-
-        return grid;
       }
 
       function rebuildFromCachedPages() {
@@ -1600,7 +1530,6 @@
         const cols = state.tableRows[0].length;
         $('tableStatsBadge').textContent = `${state.tableRows.length} rows × ${cols} cols`;
 
-        // Column letters A, B, C...
         let headHtml = '<tr><th class="px-3 py-2 text-[11px] font-semibold text-slate-400 w-10 text-center">#</th>';
         for (let c = 0; c < cols; c++) {
           const letter = XLSX.utils.encode_col(c);
@@ -1620,7 +1549,7 @@
               <td class="px-2 py-1 text-[11px] font-mono text-slate-400 text-center bg-slate-50/40">${rIdx + 1}</td>
               ${cells}
               <td class="px-1 text-center">
-                <button data-del-row="${rIdx}" title="Delete row" class="text-slate-300 hover:text-rose-600 text-sm font-bold px-1">&times;</button>
+                <button type="button" data-del-row="${rIdx}" title="Delete row" class="text-slate-300 hover:text-rose-600 text-sm font-bold px-1">&times;</button>
               </td>
             </tr>
           `;
@@ -1639,7 +1568,6 @@
             showToast('Please select your Previous Excel file first', 'warn');
             return;
           }
-          // Combine existing rows + newly extracted rows right below
           const combined = [...state.existingRows, ...state.tableRows];
           const newWs = XLSX.utils.aoa_to_sheet(combined);
           state.existingWorkbook.Sheets[state.existingSelectedSheet] = newWs;
@@ -1651,7 +1579,6 @@
         } else {
           const wb = XLSX.utils.book_new();
           const ws = XLSX.utils.aoa_to_sheet(state.tableRows);
-          // Auto-fit column widths
           const colWidths = state.tableRows[0].map((_, cIdx) => {
             const maxLen = Math.max(...state.tableRows.map((r) => String(r[cIdx] || '').length), 8);
             return { wch: Math.min(maxLen + 3, 40) };
@@ -1774,7 +1701,7 @@
         showToast('Sample A4 table loaded! Edit cells or test Excel export.', 'info');
       }
 
-      // ==================== EVENT LISTENERS ====================
+      // ==================== THEME ====================
       function applyTheme(isDark) {
         document.body.classList.toggle('dark-mode', isDark);
         $('themeIcon').textContent = isDark ? '☀️' : '🌙';
@@ -1785,12 +1712,149 @@
           if (state.currentUser) localStorage.setItem(getUserStorageKey('theme'), isDark ? 'dark' : 'light');
         } catch (e) {}
       }
+
+      // ==================== AUTH0 SPA AUTHENTICATION ====================
+      function showAuthError(msg) {
+        const box = $('authStatusMessage');
+        if (!box) return;
+        if (!msg) {
+          box.textContent = '';
+          box.classList.add('hidden');
+        } else {
+          box.textContent = msg;
+          box.classList.remove('hidden');
+        }
+      }
+
+      async function enterAppForUser(user) {
+        state.currentUser = user || {};
+        const displayLabel = user?.email || user?.name || 'Authenticated User';
+        $('headerUserBadge').textContent = displayLabel;
+        $('headerUserBadge').title = displayLabel;
+        $('authGate').classList.add('hidden');
+        $('appShell').classList.remove('hidden');
+
+        loadSettings();
+        try {
+          const userTheme = localStorage.getItem(getUserStorageKey('theme'));
+          if (userTheme === 'dark') applyTheme(true);
+          else if (userTheme === 'light') applyTheme(false);
+        } catch (e) {}
+
+        initLocalPeer();
+        if (state.pendingConnectParam) {
+          switchMode('mobile');
+          connectToRemotePeer(state.pendingConnectParam, 'mobile');
+          state.pendingConnectParam = '';
+        }
+      }
+
+      async function initAuth0() {
+        showAuthError('');
+        try {
+          if (typeof auth0 === 'undefined' || typeof auth0.createAuth0Client !== 'function') {
+            showAuthError('Auth0 SDK failed to load. Check your internet connection.');
+            return;
+          }
+
+          const redirectUri = `${window.location.origin}${window.location.pathname}`;
+          window.client = await auth0.createAuth0Client({
+            domain: AUTH0_DOMAIN,
+            clientId: AUTH0_CLIENT_ID,
+            authorizationParams: {
+              redirect_uri: redirectUri
+            }
+          });
+          state.auth0Client = window.client;
+
+          const params = new URLSearchParams(window.location.search);
+          const connectParam = params.get('connect');
+          if (connectParam) {
+            state.pendingConnectParam = connectParam;
+          }
+
+          if (params.has('error')) {
+            const errCode = params.get('error');
+            const errDesc = params.get('error_description') || '';
+            showAuthError(`Auth0 Error: ${errCode}${errDesc ? ` — ${errDesc}` : ''}`);
+            history.replaceState({}, '', window.location.pathname + (connectParam ? `?connect=${encodeURIComponent(connectParam)}` : ''));
+          }
+
+          if (params.has('code') && params.has('state')) {
+            await window.client.handleRedirectCallback();
+            history.replaceState({}, '', window.location.pathname + (connectParam ? `?connect=${encodeURIComponent(connectParam)}` : ''));
+          }
+
+          const isAuth = await window.client.isAuthenticated();
+          if (isAuth) {
+            const user = await window.client.getUser();
+            await enterAppForUser(user);
+            showToast(`Signed in as ${user?.email || user?.name || 'user'}`, 'success');
+          } else {
+            $('appShell').classList.add('hidden');
+            $('authGate').classList.remove('hidden');
+          }
+        } catch (err) {
+          showAuthError('Authentication initialization failed: ' + (err?.message || 'Unknown error'));
+        }
+      }
+
+      async function loginWithAuth0(screenHint) {
+        showAuthError('');
+        if (!state.auth0Client) {
+          showAuthError('Auth0 client is not initialized yet.');
+          return;
+        }
+        try {
+          const authParams = {
+            redirect_uri: `${window.location.origin}${window.location.pathname}`
+          };
+          if (screenHint) authParams.screen_hint = screenHint;
+          await state.auth0Client.loginWithRedirect({
+            authorizationParams: authParams
+          });
+        } catch (err) {
+          showAuthError('Login redirect failed: ' + (err?.message || 'Unknown error'));
+        }
+      }
+
+      async function logoutFromAuth0() {
+        stopLiveCamera();
+        stopQrScanner();
+        if (state.peer) { try { state.peer.destroy(); } catch (e) {} }
+        if (state.mobilePeer) { try { state.mobilePeer.destroy(); } catch (e) {} }
+        state.currentUser = null;
+
+        if (state.auth0Client) {
+          try {
+            await state.auth0Client.logout({
+              logoutParams: {
+                returnTo: `${window.location.origin}${window.location.pathname}`
+              }
+            });
+            return;
+          } catch (err) {
+            showToast('Logout warning: ' + (err?.message || ''), 'warn');
+          }
+        }
+        $('appShell').classList.add('hidden');
+        $('authGate').classList.remove('hidden');
+      }
+
+      // ==================== EVENT LISTENERS ====================
       $('btnThemeToggle').addEventListener('click', () => {
+        applyTheme(!document.body.classList.contains('dark-mode'));
+      });
+      $('btnAuthThemeToggle').addEventListener('click', () => {
         applyTheme(!document.body.classList.contains('dark-mode'));
       });
       try {
         if (localStorage.getItem('snap2sheet_theme') === 'dark') applyTheme(true);
       } catch (e) {}
+
+      $('btnAuth0Login').addEventListener('click', () => loginWithAuth0());
+      $('btnAuth0Signup').addEventListener('click', () => loginWithAuth0('signup'));
+      $('btnLogout').addEventListener('click', logoutFromAuth0);
 
       $('btnModeLaptop').addEventListener('click', () => switchMode('laptop'));
       $('btnModeMobile').addEventListener('click', () => switchMode('mobile'));
@@ -1868,7 +1932,6 @@
         if (files.length) showToast(`Added ${files.length} photo(s) in sequence`, 'success');
       });
 
-      // Remove item from queue via event delegation
       document.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-remove-idx]');
         if (btn) {
@@ -1891,7 +1954,6 @@
         }
       });
 
-      // Live cell editing
       $('previewTbody').addEventListener('input', (e) => {
         if (e.target.classList.contains('cell-input')) {
           const r = Number(e.target.getAttribute('data-r'));
@@ -1900,7 +1962,6 @@
         }
       });
 
-      // Live column split / mode re-clustering for Tesseract results
       $('colSensitivity').addEventListener('input', rebuildFromCachedPages);
       $('splitModeSelect').addEventListener('change', rebuildFromCachedPages);
 
@@ -1928,7 +1989,6 @@
       });
       $('btnDownloadExcel').addEventListener('click', downloadExcel);
 
-      // Mobile controls & 3-method switcher
       function setMobileConnMethod(method) {
         const tabs = {
           show: [$('btnMobMethodOtpShow'), $('mobPanelOtpShow')],
@@ -1990,201 +2050,6 @@
         await processImageQueue(state.laptopQueue);
       });
 
-      // ==================== AUTHENTICATION & GOOGLE SIGN-IN ====================
-      const DEFAULT_GOOGLE_CLIENT_ID = ''; // Optional: paste your Google OAuth Client ID here before hosting
-
-      function getUserStorageKey(suffix) {
-        const uid = state.currentUser?.id || 'guest';
-        return `snap2sheet_${uid}_${suffix}`;
-      }
-
-      function getSavedAccounts() {
-        try {
-          return JSON.parse(localStorage.getItem('snap2sheet_accounts') || '[]');
-        } catch (e) {
-          return [];
-        }
-      }
-
-      function saveAccount(account) {
-        try {
-          const accounts = getSavedAccounts();
-          const idx = accounts.findIndex((a) => a.id === account.id);
-          if (idx >= 0) accounts[idx] = { ...accounts[idx], ...account };
-          else accounts.push(account);
-          localStorage.setItem('snap2sheet_accounts', JSON.stringify(accounts));
-        } catch (e) {}
-      }
-
-      function getGoogleClientId() {
-        try {
-          return localStorage.getItem('snap2sheet_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
-        } catch (e) {
-          return DEFAULT_GOOGLE_CLIENT_ID;
-        }
-      }
-
-      function parseJwtPayload(token) {
-        try {
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-          return JSON.parse(jsonPayload);
-        } catch (e) {
-          return null;
-        }
-      }
-
-      function initGoogleSignIn() {
-        const clientId = getGoogleClientId().trim();
-        if ($('inputGoogleClientId')) $('inputGoogleClientId').value = clientId;
-        const container = $('googleBtnContainer');
-        const fallbackBtn = $('btnContinueGoogleFallback');
-        if (!clientId || typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
-          container.classList.add('hidden');
-          fallbackBtn.classList.remove('hidden');
-          return;
-        }
-        try {
-          google.accounts.id.initialize({
-            client_id: clientId,
-            callback: (response) => {
-              const payload = parseJwtPayload(response.credential);
-              if (payload && payload.email) {
-                const email = payload.email.toLowerCase();
-                const userObj = { id: email, label: payload.name ? `${payload.name} (${email})` : email, gmail: email, verifiedGoogle: true };
-                saveAccount(userObj);
-                completeLogin(userObj);
-              } else {
-                showToast('Could not verify Google account.', 'error');
-              }
-            }
-          });
-          container.innerHTML = '';
-          container.classList.remove('hidden');
-          fallbackBtn.classList.add('hidden');
-          google.accounts.id.renderButton(container, {
-            theme: document.body.classList.contains('dark-mode') ? 'filled_black' : 'outline',
-            size: 'large',
-            text: 'continue_with',
-            width: 340
-          });
-        } catch (e) {
-          container.classList.add('hidden');
-          fallbackBtn.classList.remove('hidden');
-        }
-      }
-
-      function completeLogin(userObj) {
-        state.currentUser = userObj;
-        try {
-          localStorage.setItem('snap2sheet_active_user', JSON.stringify(userObj));
-        } catch (e) {}
-        $('headerUserBadge').textContent = userObj.gmail || userObj.label;
-        $('authGate').classList.add('hidden');
-        $('appShell').classList.remove('hidden');
-
-        loadSettings();
-        try {
-          const userTheme = localStorage.getItem(getUserStorageKey('theme'));
-          if (userTheme === 'dark') applyTheme(true);
-          else if (userTheme === 'light') applyTheme(false);
-        } catch (e) {}
-
-        initLocalPeer();
-        if (state.pendingConnectParam) {
-          switchMode('mobile');
-          connectToRemotePeer(state.pendingConnectParam, 'mobile');
-          state.pendingConnectParam = '';
-        }
-        showToast(`Signed in as ${userObj.gmail || userObj.label}`, 'success');
-      }
-
-      function logoutUser() {
-        state.currentUser = null;
-        try { localStorage.removeItem('snap2sheet_active_user'); } catch (e) {}
-        if (state.peer) { try { state.peer.destroy(); } catch (e) {} }
-        if (state.mobilePeer) { try { state.mobilePeer.destroy(); } catch (e) {} }
-        $('appShell').classList.add('hidden');
-        $('authGate').classList.remove('hidden');
-        initGoogleSignIn();
-        showToast('Logged out', 'info');
-      }
-
-      function switchAuthTab(tab) {
-        const isLogin = tab === 'login';
-        $('panelLogin').classList.toggle('hidden', !isLogin);
-        $('panelSignup').classList.toggle('hidden', isLogin);
-        $('btnTabLogin').className = isLogin
-          ? 'py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition'
-          : 'py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
-        $('btnTabSignup').className = !isLogin
-          ? 'py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition'
-          : 'py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
-      }
-
-      $('btnTabLogin').addEventListener('click', () => switchAuthTab('login'));
-      $('btnTabSignup').addEventListener('click', () => switchAuthTab('signup'));
-      $('btnAuthThemeToggle').addEventListener('click', () => {
-        applyTheme(!document.body.classList.contains('dark-mode'));
-        initGoogleSignIn();
-      });
-      $('btnLogout').addEventListener('click', logoutUser);
-
-      $('btnToggleGoogleSetup').addEventListener('click', () => {
-        $('googleSetupBox').classList.toggle('hidden');
-      });
-
-      $('btnSaveGoogleClientId').addEventListener('click', () => {
-        const cid = $('inputGoogleClientId').value.trim();
-        try { localStorage.setItem('snap2sheet_google_client_id', cid); } catch (e) {}
-        $('googleSetupBox').classList.add('hidden');
-        initGoogleSignIn();
-        showToast(cid ? 'Google Client ID saved!' : 'Google Client ID cleared', 'success');
-      });
-
-      $('btnContinueGoogleFallback').addEventListener('click', () => {
-        const cid = getGoogleClientId().trim();
-        if (!cid) {
-          $('googleSetupBox').classList.remove('hidden');
-          showToast('Add your Google OAuth Client ID to enable real Google account sign-in.', 'info');
-          return;
-        }
-        initGoogleSignIn();
-      });
-
-      $('btnLoginWithPassword').addEventListener('click', () => {
-        const rawUser = $('inputLoginUser').value.trim().toLowerCase();
-        const pass = $('inputLoginPassword').value;
-        if (!rawUser || !rawUser.endsWith('@gmail.com') || !pass) {
-          showToast('Enter a valid @gmail.com ID and password', 'warn');
-          return;
-        }
-        const accounts = getSavedAccounts();
-        const found = accounts.find((a) => (a.id === rawUser || a.gmail === rawUser) && a.password === pass);
-        if (!found) {
-          showToast('Account not found or wrong password. Please Sign Up first.', 'error');
-          return;
-        }
-        completeLogin(found);
-      });
-
-      $('btnSignupSubmit').addEventListener('click', () => {
-        const gmail = $('inputSignupGmail').value.trim().toLowerCase();
-        const password = $('inputSignupPassword').value;
-        if (!gmail || !gmail.endsWith('@gmail.com')) {
-          showToast('Please enter a valid @gmail.com address', 'warn');
-          return;
-        }
-        if (!password || password.length < 4) {
-          showToast('Please set a password (minimum 4 characters)', 'warn');
-          return;
-        }
-        const userObj = { id: gmail, label: gmail, gmail, password };
-        saveAccount(userObj);
-        completeLogin(userObj);
-      });
-
       // ==================== INIT ====================
       loadSettings();
       if (!window.location.href.startsWith('http://') && !window.location.href.startsWith('https://')) {
@@ -2193,20 +2058,8 @@
       $('inputCustomHostUrl').addEventListener('input', () => {
         if (state.peerId) renderQRCode(getMobileConnectUrl(state.peerId));
       });
-      const params = new URLSearchParams(window.location.search);
-      const connectParam = params.get('connect');
-      if (connectParam) state.pendingConnectParam = connectParam;
 
-      let activeUser = null;
-      try {
-        activeUser = JSON.parse(localStorage.getItem('snap2sheet_active_user') || 'null');
-      } catch (e) {}
-      if (activeUser && activeUser.id) {
-        completeLogin(activeUser);
-      } else {
-        window.addEventListener('load', initGoogleSignIn);
-        setTimeout(initGoogleSignIn, 500);
-      }
+      initAuth0();
     })();
   </script>
 </body>
