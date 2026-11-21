@@ -51,6 +51,11 @@
       margin: 0 auto;
       border-radius: 8px;
     }
+    #qrContainer canvas,
+    #qrContainer img {
+     width: 220px !important;
+     height: 220px !important;
+}
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -805,26 +810,22 @@
         }
       }
 
-      function renderQRCode(url) {
-        const container = $('qrContainer');
-        container.innerHTML = '';
-        const qrText = (url && url.length <= 220) ? url : (state.peerId || 'S2S-PAIR');
-        if (typeof QRCode !== 'undefined') {
-          try {
-            new QRCode(container, {
-              text: qrText,
-              width: 150,
-              height: 150,
-              colorDark: '#0f172a',
-              colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.L
-            });
-            return;
-          } catch (e) {}
-        }
-        container.innerHTML = `<div class="p-3 text-center text-xs text-slate-600 font-mono bg-slate-50 rounded-lg border border-slate-200">${qrText}</div>`;
-      }
+     function renderQRCode(url) {
+  const container = $('qrContainer');
+  container.innerHTML = '';
 
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(container, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: "#000000",
+      colorLight: "#FFFFFF",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }
+}
+      
       function connectToRemotePeer(rawCode, fromMode) {
         const targetId = normalizePeerId(rawCode);
         if (!targetId) {
