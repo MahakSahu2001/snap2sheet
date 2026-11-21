@@ -701,17 +701,9 @@
       }
 
       function getMobileConnectUrl(peerId) {
-        const custom = ($('inputCustomHostUrl')?.value || '').trim().split('?')[0].split('#')[0];
-        if (custom.startsWith('http://') || custom.startsWith('https://')) {
-          return `${custom}?connect=${encodeURIComponent(peerId)}`;
-        }
-        const href = window.location.href || '';
-        const base = href.split('?')[0].split('#')[0];
-        if (base.startsWith('http://') || base.startsWith('https://')) {
-          return `${base}?connect=${encodeURIComponent(peerId)}`;
-        }
-        return peerId;
-      }
+  const base = "https://mahaksahu2001.github.io/snap2sheet/";
+  return `${base}?connect=${encodeURIComponent(peerId)}`;
+}
 
       function setupIncomingConn(conn) {
         conn.on('open', () => {
@@ -1755,6 +1747,8 @@
       }
 
       async function initAuth0() {
+        const params = new URLSearchParams(window.location.search);
+const connectId = params.get("connect");
         showAuthError('');
         try {
           if (typeof auth0 === 'undefined' || typeof auth0.createAuth0Client !== 'function') {
@@ -1794,6 +1788,12 @@
           if (isAuth) {
             const user = await window.client.getUser();
             await enterAppForUser(user);
+            if (state.pendingConnectParam) {
+  switchMode('mobile');
+  setTimeout(() => {
+    connectToRemotePeer(state.pendingConnectParam, 'mobile');
+  }, 1500);
+}
             showToast(`Signed in as ${user?.email || user?.name || 'user'}`, 'success');
           } else {
             $('appShell').classList.add('hidden');
