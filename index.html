@@ -785,7 +785,12 @@
         $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full';
 
         try {
-          const peer = new Peer(laptopId);
+          const peer = new Peer(laptopId, {
+  host: "0.peerjs.com",
+  secure: true,
+  port: 443,
+  debug: 2
+});
           state.peer = peer;
           peer.on('open', (id) => {
             state.peerId = id;
@@ -800,7 +805,7 @@
             $('laptopPeerBadge').className = 'inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full';
           });
 
-          const mPeer = new Peer(mobileId);
+          const mPeer = new Peer(mobileId, {   host: "0.peerjs.com",   secure: true,   port: 443,   debug: 2 });
           state.mobilePeer = mPeer;
           mPeer.on('connection', (conn) => setupIncomingConn(conn));
         } catch (err) {
