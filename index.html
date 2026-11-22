@@ -73,10 +73,14 @@
       background-color: #111827 !important;
       color: #e2e8f0;
     }
-    body.dark-mode .bg-slate-50,
-    body.dark-mode .bg-slate-100 {
-      background-color: #ffffff !important;
-    }
+   body.dark-mode #qrContainer,
+body.dark-mode #qrContainer canvas,
+body.dark-mode #qrContainer img {
+  background: #ffffff !important;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 8px #ffffff;
+}
     body.dark-mode #qrContainer,
     body.dark-mode #qrContainer canvas,
     body.dark-mode #qrContainer img {
