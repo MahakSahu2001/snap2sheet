@@ -85,7 +85,10 @@
           border-radius: 10px;
         box-shadow: 0 0 0 8px #ffffff;
 }
-    
+    body.dark-mode .qr-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
     body.dark-mode .border-slate-200,
     body.dark-mode .border-slate-300,
     body.dark-mode .border-slate-100 {
@@ -231,7 +234,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         <!-- Card 1: Wireless Mobile Link (QR) -->
-        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between qr-card">
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
@@ -273,7 +276,7 @@
         </div>
 
         <!-- Card 2: Excel Output Mode (New vs Append) -->
-        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between qr-card">
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
@@ -334,7 +337,7 @@
         </div>
 
         <!-- Card 3: Image Queue & Direct Upload -->
-        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between qr-card">
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full">
@@ -826,11 +829,11 @@
   if (typeof QRCode !== 'undefined') {
     new QRCode(container, {
       text: url,
-      width: 250,
-      height: 250,
+      width: 280,
+      height: 280,
       colorDark: "#000000",
       colorLight: "#FFFFFF",
-      correctLevel: QRCode.CorrectLevel.M
+      correctLevel: QRCode.CorrectLevel.L
     });
   }
 }
