@@ -77,6 +77,15 @@
     body.dark-mode .bg-slate-100 {
       background-color: #ffffff !important;
     }
+    body.dark-mode #qrContainer,
+    body.dark-mode #qrContainer canvas,
+    body.dark-mode #qrContainer img {
+     background: #ffffff !important;
+          padding: 12px;
+          border-radius: 10px;
+        box-shadow: 0 0 0 8px #ffffff;
+}
+    
     body.dark-mode .border-slate-200,
     body.dark-mode .border-slate-300,
     body.dark-mode .border-slate-100 {
@@ -817,11 +826,11 @@
   if (typeof QRCode !== 'undefined') {
     new QRCode(container, {
       text: url,
-      width: 220,
-      height: 220,
+      width: 250,
+      height: 250,
       colorDark: "#000000",
       colorLight: "#FFFFFF",
-      correctLevel: QRCode.CorrectLevel.H
+      correctLevel: QRCode.CorrectLevel.M
     });
   }
 }
